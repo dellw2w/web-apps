@@ -19,6 +19,7 @@ import PluginsController from '../../../../common/mobile/lib/controller/Plugins.
 import EncodingController from "./Encoding";
 import DropdownListController from "./DropdownList";
 import { Device } from '../../../../common/mobile/utils/device';
+
 @inject(
     "users",
     "storeAppOptions",
@@ -32,8 +33,9 @@ import { Device } from '../../../../common/mobile/utils/device';
     "storeApplicationSettings",
     "storeLinkSettings",
     "storeToolbarSettings",
-    "storeNavigation"
-    )
+    "storeNavigation",
+    "storeVersionHistory"
+)
 class MainController extends Component {
     constructor(props) {
         super(props);
@@ -46,7 +48,8 @@ class MainController extends Component {
         this._state = {
             licenseType: false,
             isFromGatewayDownloadAs: false,
-            isDocModified: false
+            isDocModified: false,
+            docProtection: false
         };
 
         this.defaultTitleText = __APP_TITLE_TEXT__;
@@ -171,8 +174,10 @@ class MainController extends Component {
                 // Document Info
 
                 const storeDocumentInfo = this.props.storeDocumentInfo;
+                // this.document
 
                 storeDocumentInfo.setDataDoc(this.document);
+                storeDocumentInfo.setDocInfo(docInfo);
 
                 // Common.SharedSettings.set('document', data.doc);
 
@@ -193,10 +198,11 @@ class MainController extends Component {
                 // check licType
                 if (Asc.c_oLicenseResult.Expired === licType ||
                     Asc.c_oLicenseResult.Error === licType ||
-                    Asc.c_oLicenseResult.ExpiredTrial === licType) {
+                    Asc.c_oLicenseResult.ExpiredTrial === licType ||
+                    Asc.c_oLicenseResult.NotBefore === licType) {
                     f7.dialog.create({
-                        title   : _t.titleLicenseExp,
-                        text    : _t.warnLicenseExp
+                        title   : Asc.c_oLicenseResult.NotBefore === licType ? _t.titleLicenseNotActive : _t.titleLicenseExp,
+                        text    : Asc.c_oLicenseResult.NotBefore === licType ? _t.warnLicenseBefore : _t.warnLicenseExp
                     }).open();
                     return;
                 }
@@ -234,6 +240,9 @@ class MainController extends Component {
 
                 const appOptions = this.props.storeAppOptions;
                 const appSettings = this.props.storeApplicationSettings;
+                const storeDocumentInfo = this.props.storeDocumentInfo;
+                const dataDoc = storeDocumentInfo.dataDoc;
+                const isExtRestriction = dataDoc.fileType !== 'oform';
 
                 f7.emit('resize');
 
@@ -266,7 +275,7 @@ class MainController extends Component {
 
                 value = LocalStorage.getBool('mobile-view', true);
 
-                if(value) {
+                if(value && isExtRestriction) {
                     this.api.ChangeReaderMode();
                 } else {
                     appOptions.changeMobileView();
@@ -498,11 +507,22 @@ class MainController extends Component {
 
         if (appOptions.config.mode === 'view') {
             if (appOptions.canLiveView && (this._state.licenseType===Asc.c_oLicenseResult.ConnectionsLive || this._state.licenseType===Asc.c_oLicenseResult.ConnectionsLiveOS ||
-                                            this._state.licenseType===Asc.c_oLicenseResult.UsersViewCount || this._state.licenseType===Asc.c_oLicenseResult.UsersViewCountOS)) {
+                                            this._state.licenseType===Asc.c_oLicenseResult.UsersViewCount || this._state.licenseType===Asc.c_oLicenseResult.UsersViewCountOS ||
+                                            !appOptions.isAnonymousSupport && !!appOptions.config.user.anonymous)) {
                 appOptions.canLiveView = false;
                 this.api.asc_SetFastCollaborative(false);
             }
             Common.Notifications.trigger('toolbar:activatecontrols');
+        } else if (!appOptions.isAnonymousSupport && !!appOptions.config.user.anonymous) {
+            Common.Notifications.trigger('toolbar:activatecontrols');
+            Common.Notifications.trigger('toolbar:deactivateeditcontrols');
+            this.api.asc_coAuthoringDisconnect();
+            Common.Notifications.trigger('api:disconnect');
+            f7.dialog.create({
+                title: _t.notcriticalErrorTitle,
+                text : _t.warnLicenseAnonymous,
+                buttons: [{text: 'OK'}]
+            }).open();
         } else if (this._state.licenseType) {
             let license = this._state.licenseType;
             let buttons = [{text: 'OK'}];
@@ -535,6 +555,7 @@ class MainController extends Component {
             } else {
                 Common.Notifications.trigger('toolbar:activatecontrols');
                 Common.Notifications.trigger('toolbar:deactivateeditcontrols');
+                this.api.asc_coAuthoringDisconnect();
                 Common.Notifications.trigger('api:disconnect');
             }
 
@@ -593,12 +614,8 @@ class MainController extends Component {
             this.api.Resize();
         });
 
-        $$(window).on('popover:open popup:open sheet:open actions:open dialog:open', () => {
+        $$(window).on('popover:open popup:open sheet:open actions:open dialog:open searchbar:enable', () => {
             this.api.asc_enableKeyEvents(false);
-        });
-
-        $$(window).on('popover:close popup:close sheet:close actions:close dialog:close', () => {
-            this.api.asc_enableKeyEvents(true);
         });
 
         this.api.asc_registerCallback('asc_onDocumentUpdateVersion', this.onUpdateVersion.bind(this));
@@ -610,6 +627,7 @@ class MainController extends Component {
         EditorUIController.initThemeColors && EditorUIController.initThemeColors();
 
         this.api.asc_registerCallback('asc_onDownloadUrl', this.onDownloadUrl.bind(this));
+        this.api.asc_registerCallback('asc_onExpiredToken', this.onExpiredToken.bind(this));
 
         const storeDocumentSettings = this.props.storeDocumentSettings;
         this.api.asc_registerCallback('asc_onPageOrient', isPortrait => {
@@ -621,7 +639,13 @@ class MainController extends Component {
 
         this.api.asc_registerCallback('asc_onShowContentControlsActions', (obj, x, y) => {
             const storeAppOptions = this.props.storeAppOptions;
-            if (!storeAppOptions.isEdit && !(storeAppOptions.isRestrictedEdit && storeAppOptions.canFillForms) || this.props.users.isDisconnected) return;
+            const storeDocumentInfo = this.props.storeDocumentInfo;
+            const isViewer = storeAppOptions.isViewer;
+            const dataDoc = storeDocumentInfo.dataDoc;
+            const docExt = dataDoc.fileType;
+            const isAvailableExt = docExt && docExt !== 'oform';
+
+            if (!storeAppOptions.isEdit && !(storeAppOptions.isRestrictedEdit && storeAppOptions.canFillForms) || this.props.users.isDisconnected || (isViewer && isAvailableExt)) return;
 
             switch (obj.type) {
                 case Asc.c_oAscContentControlSpecificType.DateTime:
@@ -653,25 +677,6 @@ class MainController extends Component {
 
         this.api.asc_registerCallback('asc_onVerticalAlign', (typeBaseline) => {
             storeTextSettings.resetTypeBaseline(typeBaseline);
-        });
-        this.api.asc_registerCallback('asc_onListType', (data) => {
-            let type    = data.get_ListType();
-            let subtype = data.get_ListSubType();
-            storeTextSettings.resetListType(type);
-            switch (type) {
-                case 0:
-                    storeTextSettings.resetBullets(subtype);
-                    storeTextSettings.resetNumbers(-1);
-                    break;
-                case 1:
-                    storeTextSettings.resetNumbers(subtype);
-                    storeTextSettings.resetBullets(-1);
-                    break;
-                default: 
-                    storeTextSettings.resetBullets(-1);
-                    storeTextSettings.resetNumbers(-1);
-                    storeTextSettings.resetMultiLevel(-1);
-            }
         });
         this.api.asc_registerCallback('asc_onPrAlign', (align) => {
             storeTextSettings.resetParagraphAlign(align);
@@ -754,13 +759,20 @@ class MainController extends Component {
         // Downloaded Advanced Options
         
         this.api.asc_registerCallback('asc_onAdvancedOptions', (type, advOptions, mode, formatOptions) => {
-            const {t} = this.props;
+            const { t } = this.props;
             const _t = t("Settings", { returnObjects: true });
+            const storeAppOptions = this.props.storeAppOptions;
+
             if(type == Asc.c_oAscAdvancedOptionsID.DRM) {
+                storeAppOptions.setEncryptionFile(true);
                 onAdvancedOptions(type, _t, this._isDocReady, this.props.storeAppOptions.canRequestClose, this.isDRM);
                 this.isDRM = true;
             }
         });
+
+        // Protection document
+        this.api.asc_registerCallback('asc_onChangeDocumentProtection', this.onChangeProtectDocument.bind(this));
+        // this.api.asc_registerCallback('asc_onLockDocumentProtection', this.onLockDocumentProtection.bind(this));
 
         // Toolbar settings
 
@@ -783,13 +795,113 @@ class MainController extends Component {
         });
     }
 
+    onExpiredToken() {
+        const currentRev = this.props.storeVersionHistory.currentVersion.revision;
+        
+        setTimeout(() => {
+            Common.Gateway.requestHistoryData(currentRev);
+        }, 10);
+    }
+
+    onChangeProtectDocument() {
+        const storeVersionHistory = this.props.storeVersionHistory;
+        if (storeVersionHistory.isVersionHistoryMode) return;
+
+        const { t } = this.props;
+        const storeAppOptions = this.props.storeAppOptions;
+        const props = this.getDocProps(true);
+        const isProtected = props && (props.isReadOnly || props.isCommentsOnly || props.isFormsOnly || props.isReviewOnly || props.isTrackedChanges);
+        let textWarningDialog;
+
+        if(!storeAppOptions.isReviewOnly) {
+            if(props.isReviewOnly) {
+                this.api.asc_SetLocalTrackRevisions(true);
+            } else {
+                this.api.asc_SetLocalTrackRevisions(false);
+            }
+        }
+
+        switch(props.type) {
+            case Asc.c_oAscEDocProtect.ReadOnly:
+                textWarningDialog = t('Main.textDialogProtectedOnlyView');
+                break;
+            case Asc.c_oAscEDocProtect.Comments:
+                textWarningDialog = t('Main.textDialogProtectedEditComments');
+                break;
+            case Asc.c_oAscEDocProtect.TrackedChanges: 
+                textWarningDialog = t('Main.textDialogProtectedChangesTracked')
+                break;
+            case Asc.c_oAscEDocProtect.Forms:
+                textWarningDialog = t('Main.textDialogProtectedFillForms');
+                break;
+        }
+
+        storeAppOptions.setProtection(isProtected);
+        storeAppOptions.setTypeProtection(props.type);
+        props && this.applyRestrictions(props.type);
+        Common.Notifications.trigger('protect:doclock', props);
+
+        if(isProtected) {
+            f7.dialog.create({
+                title: t('Main.titleDialogProtectedDocument'),
+                text: textWarningDialog,
+                buttons: [
+                    {
+                        text: t('Main.textOk')
+                    }
+                ]
+            }).open();
+        }
+    }
+
+    applyRestrictions(type) {
+        const storeAppOptions = this.props.storeAppOptions;
+
+        if (type === Asc.c_oAscEDocProtect.ReadOnly) {
+            this.api.asc_setRestriction(Asc.c_oAscRestrictionType.View);
+        } else if (type === Asc.c_oAscEDocProtect.Comments) {
+            this.api.asc_setRestriction(storeAppOptions.canComments ? Asc.c_oAscRestrictionType.OnlyComments : Asc.c_oAscRestrictionType.View);
+        } else if (type === Asc.c_oAscEDocProtect.Forms) {
+            this.api.asc_setRestriction(storeAppOptions.canFillForms ? Asc.c_oAscRestrictionType.OnlyForms : Asc.c_oAscRestrictionType.View);
+        } else { 
+            if (storeAppOptions?.isRestrictedEdit) {
+                storeAppOptions.canComments && this.api.asc_setRestriction(Asc.c_oAscRestrictionType.OnlyComments);
+                storeAppOptions.canFillForms && this.api.asc_setRestriction(Asc.c_oAscRestrictionType.OnlyForms);
+            } else {
+                // this.api.asc_setRestriction(Asc.c_oAscRestrictionType.None);
+                this.api.asc_setRestriction(Asc.c_oAscRestrictionType.View);
+            }
+        }
+    };
+
+    getDocProps(isUpdate) {
+        const storeAppOptions = this.props.storeAppOptions;
+        if (!storeAppOptions || !storeAppOptions.isEdit && !storeAppOptions.isRestrictedEdit) return;
+
+        if (isUpdate || !this._state.docProtection) {
+            const props = this.api.asc_getDocumentProtection();
+            const type = props ? props.asc_getEditType() : Asc.c_oAscEDocProtect.None;
+
+            this._state.docProtection = {
+                type: type,
+                isReadOnly: type === Asc.c_oAscEDocProtect.ReadOnly,
+                isCommentsOnly: type === Asc.c_oAscEDocProtect.Comments,
+                isReviewOnly: type === Asc.c_oAscEDocProtect.TrackedChanges,
+                isFormsOnly: type === Asc.c_oAscEDocProtect.Forms,
+                isTrackedChanges: type === Asc.c_oAscEDocProtect.TrackedChanges
+            };
+        }
+
+        return this._state.docProtection;
+    }
+
     onApiTextReplaced(found, replaced) {
         const { t } = this.props;
 
         if (found) { 
             f7.dialog.alert(null, !(found - replaced > 0) ? t('Main.textReplaceSuccess').replace(/\{0\}/, `${replaced}`) : t('Main.textReplaceSkipped').replace(/\{0\}/, `${found - replaced}`));
         } else {
-            f7.dialog.alert(null, t('Main.textNoTextFound'));
+            f7.dialog.alert(null, t('Main.textNoMatches'));
         }
     }
 
@@ -810,13 +922,14 @@ class MainController extends Component {
 
         controlsContainer.css({left: `${x}px`, top: `${y}px`});
 
+        const val = specProps ? specProps.get_FullDate() : undefined;
         this.cmpCalendar = f7.calendar.create({
             inputEl: '#calendar-target-element',
             dayNamesShort: [t('Edit.textSu'), t('Edit.textMo'), t('Edit.textTu'), t('Edit.textWe'), t('Edit.textTh'), t('Edit.textFr'), t('Edit.textSa')],
             monthNames: [t('Edit.textJanuary'), t('Edit.textFebruary'), t('Edit.textMarch'), t('Edit.textApril'), t('Edit.textMay'), t('Edit.textJune'), t('Edit.textJuly'), t('Edit.textAugust'), t('Edit.textSeptember'), t('Edit.textOctober'), t('Edit.textNovember'), t('Edit.textDecember')],
             backdrop: isPhone ? false : true,
             closeByBackdropClick: isPhone ? false : true,
-            value: [new Date(specProps ? specProps.get_FullDate() : undefined)],
+            value: [val ? new Date(val) : new Date()],
             openIn: isPhone ? 'sheet' : 'popover',
             on: {
                 change: (calendar, value) => {
@@ -915,7 +1028,37 @@ class MainController extends Component {
     }
 
     onRequestClose () {
-        Common.Gateway.requestClose();
+        const { t } = this.props;
+        const _t = t("Toolbar", { returnObjects: true });
+
+        if (this.api.isDocumentModified()) {
+            this.api.asc_stopSaving();
+
+            f7.dialog.create({
+                title: _t.dlgLeaveTitleText,
+                text: _t.dlgLeaveMsgText,
+                verticalButtons: true,
+                buttons : [
+                    {
+                        text: _t.leaveButtonText,
+                        onClick: () => {
+                            this.api.asc_undoAllChanges();
+                            this.api.asc_continueSaving();
+                            Common.Gateway.requestClose();
+                        }
+                    },
+                    {
+                        text: _t.stayButtonText,
+                        bold: true,
+                        onClick: () => {
+                            this.api.asc_continueSaving();
+                        }
+                    }
+                ]
+            }).open();
+        } else {
+            Common.Gateway.requestClose();
+        }
     }
 
     onUpdateVersion (callback) {

@@ -6,13 +6,15 @@ import { Device } from '../../../../common/mobile/utils/device';
 import EditOptions from '../view/edit/Edit';
 import AddOptions from '../view/add/Add';
 import Settings from '../view/settings/Settings';
-import CollaborationView from '../../../../common/mobile/lib/view/collaboration/Collaboration.jsx';
+import { Collaboration } from '../../../../common/mobile/lib/view/collaboration/Collaboration.jsx';
 import { Preview } from "../controller/Preview";
 import { Search, SearchSettings } from '../controller/Search';
 import ContextMenu from '../controller/ContextMenu';
 import { Toolbar } from "../controller/Toolbar";
 import { AddLinkController } from '../controller/add/AddLink';
 import { EditLinkController } from '../controller/edit/EditLink';
+import VersionHistoryController from '../../../../common/mobile/lib/controller/VersionHistory';
+
 class MainPage extends Component {
     constructor(props) {
         super(props);
@@ -59,6 +61,8 @@ class MainPage extends Component {
             } else if( opts === 'edit-link') {
                 this.state.editLinkSettingsVisible && (opened = true);
                 newState.editLinkSettingsVisible = true;
+            } else if (opts === 'history') {
+                newState.historyVisible = true;
             }
 
             for (let key in this.state) {
@@ -96,6 +100,8 @@ class MainPage extends Component {
                     return {addLinkSettingsVisible: false};
                 else if( opts === 'edit-link') 
                     return {editLinkSettingsVisible: false};
+                else if (opts === 'history')
+                    return {historyVisible: false}
             });
             if ((opts === 'edit' || opts === 'coauth') && Device.phone) {
                 f7.navbar.show('.main-navbar');
@@ -111,31 +117,43 @@ class MainPage extends Component {
     render() {
         const appOptions = this.props.storeAppOptions;
         const config = appOptions.config;
+        const isShowPlaceholder = !appOptions.isDocReady && (!config.customization || !(config.customization.loaderName || config.customization.loaderLogo));
 
-        let showLogo = !(appOptions.canBrandingExt && (config.customization && (config.customization.loaderName || config.customization.loaderLogo)));
-        if ( !Object.keys(config).length ) {
-            showLogo = !/&(?:logo)=/.test(window.location.search);
+        let isHideLogo = true,
+            isCustomization = true,
+            isBranding = true;
+
+        if (!appOptions.isDisconnected && config?.customization) {
+            isCustomization = !!(config.customization && (config.customization.loaderName || config.customization.loaderLogo));
+            isBranding = appOptions.canBranding || appOptions.canBrandingExt;
+
+            if (!Object.keys(config).length) {
+                isCustomization = !/&(?:logo)=/.test(window.location.search);
+            }
+
+            isHideLogo = isCustomization && isBranding; 
         }
 
-        const showPlaceholder = !appOptions.isDocReady && (!config.customization || !(config.customization.loaderName || config.customization.loaderLogo));
         return (
             <Fragment>
                 {!this.state.previewVisible ? null : <Preview onclosed={this.handleOptionsViewClosed.bind(this, 'preview')} />}
-                <Page name="home" className={`editor${ showLogo ? ' page-with-logo' : ''}`}>
+                <Page name="home" className={`editor${!isHideLogo ? ' page-with-logo' : ''}`}>
                     {/* Top Navbar */}
-                    <Navbar id='editor-navbar' className={`main-navbar${showLogo ? ' navbar-with-logo' : ''}`}>
-                        {showLogo && appOptions.canBranding !== undefined && <div className="main-logo" onClick={() => {
+                    <Navbar id='editor-navbar'
+                            className={`main-navbar${!isHideLogo ? ' navbar-with-logo' : ''}`}>
+                        {!isHideLogo && <div className="main-logo" onClick={() => {
                             window.open(`${__PUBLISHER_URL__}`, "_blank");
                         }}><Icon icon="icon-logo"></Icon></div>}
                         <Subnavbar>
-                            <Toolbar openOptions={this.handleClickToOpenOptions} closeOptions={this.handleOptionsViewClosed}/>
+                            <Toolbar openOptions={this.handleClickToOpenOptions}
+                                     closeOptions={this.handleOptionsViewClosed}/>
                             <Search useSuspense={false}/>
                         </Subnavbar>
                     </Navbar>
                     {/* Page content */}
                     <View id="editor_sdk" />
 
-                    {showPlaceholder ?
+                    {isShowPlaceholder ?
                         <div className="doc-placeholder">
                             <div className="slide-h">
                                 <div className="slide-v">
@@ -174,7 +192,11 @@ class MainPage extends Component {
                     }
                     {
                         !this.state.collaborationVisible ? null :
-                            <CollaborationView onclosed={this.handleOptionsViewClosed.bind(this, 'coauth')} />
+                            <Collaboration onclosed={this.handleOptionsViewClosed.bind(this, 'coauth')} />
+                    }
+                    {
+                        !this.state.historyVisible ? null :
+                            <VersionHistoryController onclosed={this.handleOptionsViewClosed.bind(this, 'history')} />
                     }
                     {appOptions.isDocReady && <ContextMenu openOptions={this.handleClickToOpenOptions.bind(this)} />}   
                 </Page>

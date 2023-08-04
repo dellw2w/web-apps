@@ -227,11 +227,11 @@ const ErrorController = inject('storeAppOptions','storeSpreadsheetInfo')(({store
                 break;
 
             case Asc.c_oAscError.ID.VKeyEncrypt:
-                config.msg = _t.errorKeyEncrypt;
+                config.msg = _t.errorToken;
                 break;
 
             case Asc.c_oAscError.ID.KeyExpire:
-                config.msg = _t.errorKeyExpire;
+                config.msg = _t.errorTokenExpire;
                 break;
 
             case Asc.c_oAscError.ID.UserCountExceed:
@@ -340,6 +340,10 @@ const ErrorController = inject('storeAppOptions','storeSpreadsheetInfo')(({store
                     config.msg = _t.errorInconsistentExtPptx.replace('%1', docExt);
                 else
                     config.msg = _t.errorInconsistentExt;
+                break;
+
+            case Asc.c_oAscError.ID.ProtectedRangeByOtherUser:
+                config.msg = t('Error.errorProtectedRange');
                 break;
 
             default:

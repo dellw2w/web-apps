@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2019
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -133,7 +132,8 @@ define([
                     cls: 'btn-toolbar x-huge icon-top',
                     iconCls: 'toolbar__icon btn-import-data',
                     caption: this.capDataFromText,
-                    menu: !this.toolbar.mode.isDesktopApp,
+                    // menu: !this.toolbar.mode.isDesktopApp,
+                    menu: true,
                     disabled: true,
                     lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.sheetLock, _set.wbLock, _set.lostConnect, _set.coAuth, _set.wsLock],
                     dataHint: '1',
@@ -150,7 +150,7 @@ define([
                     split: true,
                     menu: true,
                     disabled: true,
-                    lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.sheetLock, _set.lostConnect, _set.coAuth, _set.wsLock],
+                    lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.sheetLock, _set.lostConnect, _set.coAuth, _set.wsLock, _set.userProtected],
                     dataHint: '1',
                     dataHintDirection: 'bottom',
                     dataHintOffset: 'small'
@@ -165,7 +165,7 @@ define([
                     split: true,
                     menu: true,
                     disabled: true,
-                    lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.sheetLock, _set.lostConnect, _set.coAuth, _set.wsLock],
+                    lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.sheetLock, _set.lostConnect, _set.coAuth, _set.wsLock, _set.userProtected],
                     dataHint: '1',
                     dataHintDirection: 'bottom',
                     dataHintOffset: 'small'
@@ -179,7 +179,7 @@ define([
                     caption: this.capBtnTextToCol,
                     split: false,
                     disabled: true,
-                    lock: [_set.multiselect, _set.multiselectCols, _set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.lostConnect, _set.coAuth, _set.wsLock],
+                    lock: [_set.multiselect, _set.multiselectCols, _set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.lostConnect, _set.coAuth, _set.wsLock, _set.userProtected],
                     dataHint: '1',
                     dataHintDirection: 'bottom',
                     dataHintOffset: 'small'
@@ -209,10 +209,10 @@ define([
                 this.btnRemoveDuplicates = new Common.UI.Button({
                     parentEl: $host.find('#slot-btn-rem-duplicates'),
                     cls: 'btn-toolbar x-huge icon-top',
-                    iconCls: 'toolbar__icon btn-remove-duplicates',
+                    iconCls: 'toolbar__icon btn-big-remove-duplicates',
                     caption: this.capBtnTextRemDuplicates,
                     disabled: true,
-                    lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.lostConnect, _set.coAuth, _set.ruleFilter, _set.editPivot, _set.cantModifyFilter, _set.sheetLock, _set.wsLock],
+                    lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.lostConnect, _set.coAuth, _set.ruleFilter, _set.editPivot, _set.cantModifyFilter, _set.sheetLock, _set.wsLock, _set.userProtected],
                     dataHint: '1',
                     dataHintDirection: 'bottom',
                     dataHintOffset: 'small'
@@ -225,7 +225,7 @@ define([
                     iconCls: 'toolbar__icon btn-data-validation',
                     caption: this.capBtnTextDataValidation,
                     disabled: true,
-                    lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.lostConnect, _set.coAuth, _set.editPivot, _set.cantModifyFilter, _set.sheetLock, _set.wsLock],
+                    lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.lostConnect, _set.coAuth, _set.editPivot, _set.cantModifyFilter, _set.sheetLock, _set.wsLock, _set.userProtected],
                     dataHint: '1',
                     dataHintDirection: 'bottom',
                     dataHintOffset: 'small'
@@ -238,7 +238,7 @@ define([
                     iconCls: 'toolbar__icon btn-custom-sort',
                     caption: this.capBtnTextCustomSort,
                     disabled: true,
-                    lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.lostConnect, _set.coAuth, _set.ruleFilter, _set.editPivot, _set.cantModifyFilter, _set.sheetLock, _set['Sort']],
+                    lock: [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.lostConnect, _set.coAuth, _set.ruleFilter, _set.cantModifyFilter, _set.sheetLock, _set['Sort'], _set.userProtected],
                     dataHint: '1',
                     dataHintDirection: 'bottom',
                     dataHintOffset: 'small'
@@ -248,7 +248,7 @@ define([
                 this.btnExternalLinks = new Common.UI.Button({
                     parentEl: $host.find('#slot-btn-data-external-links'),
                     cls: 'btn-toolbar x-huge icon-top',
-                    iconCls: 'toolbar__icon edit-links',
+                    iconCls: 'toolbar__icon btn-edit-links',
                     caption: this.capDataExternalLinks,
                     disabled: true,
                     lock: [_set.editCell, _set.sheetLock, _set.wbLock, _set.lostConnect, _set.coAuth, _set.wsLock],
@@ -259,17 +259,17 @@ define([
                 this.lockedControls.push(this.btnExternalLinks);
 
                 this.btnsSortDown = Common.Utils.injectButtons($host.find('.slot-sortdesc'), '', 'toolbar__icon btn-sort-down', '',
-                    [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.lostConnect, _set.coAuth, _set.ruleFilter, _set.cantModifyFilter, _set.sheetLock, _set.cantSort, _set['Sort']], undefined, undefined, undefined, '1', 'top', undefined, 'D');
+                    [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.lostConnect, _set.coAuth, _set.ruleFilter, _set.cantModifyFilter, _set.sheetLock, _set.cantSort, _set['Sort'], _set.userProtected], undefined, undefined, undefined, '1', 'top', undefined, 'D');
 
                 this.btnsSortUp = Common.Utils.injectButtons($host.find('.slot-sortasc'), '', 'toolbar__icon btn-sort-up', '',
-                    [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.lostConnect, _set.coAuth, _set.ruleFilter, _set.cantModifyFilter, _set.sheetLock, _set.cantSort, _set['Sort']], undefined, undefined, undefined, '1', 'top', undefined, 'U');
+                    [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.lostConnect, _set.coAuth, _set.ruleFilter, _set.cantModifyFilter, _set.sheetLock, _set.cantSort, _set['Sort'], _set.userProtected], undefined, undefined, undefined, '1', 'top', undefined, 'U');
 
                 this.btnsSetAutofilter = Common.Utils.injectButtons($host.find('.slot-btn-setfilter'), '', 'toolbar__icon btn-autofilter', '',
-                    [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.lostConnect, _set.coAuth, _set.ruleFilter, _set.editPivot, _set.cantModifyFilter, _set.tableHasSlicer, _set.wsLock],
+                    [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.selSlicer, _set.lostConnect, _set.coAuth, _set.ruleFilter, _set.editPivot, _set.cantModifyFilter, _set.tableHasSlicer, _set.wsLock, _set.userProtected],
                     false, false, true, '1', 'bottom', undefined, 'F');
 
                 this.btnsClearAutofilter = Common.Utils.injectButtons($host.find('.slot-btn-clear-filter'), '', 'toolbar__icon btn-clear-filter', '',
-                    [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.lostConnect, _set.coAuth, _set.ruleDelFilter, _set.wsLock], undefined, undefined, undefined, '1', 'bottom', undefined, 'N');
+                    [_set.editCell, _set.selChart, _set.selChartText, _set.selShape, _set.selShapeText, _set.selImage, _set.lostConnect, _set.coAuth, _set.ruleDelFilter, _set.wsLock, _set.userProtected], undefined, undefined, undefined, '1', 'bottom', undefined, 'N');
 
                 Array.prototype.push.apply(this.lockedControls, this.btnsSortDown.concat(this.btnsSortUp, this.btnsSetAutofilter,this.btnsClearAutofilter));
 
@@ -311,10 +311,15 @@ define([
                     me.btnDataFromText.menu && me.btnDataFromText.setMenu(new Common.UI.Menu({
                         items: [
                             { caption: me.mniFromFile, value: 'file' },
-                            { caption: me.mniFromUrl,  value: 'url' }
+                            { caption: me.mniFromUrl,  value: 'url' },
+                            { caption: '--'},
+                            {   caption: me.mniFromXMLFile,
+                                value: 'xml'
+                            }
                             // { caption: me.mniImageFromStorage, value: 'storage'}
                         ]
                     }));
+                    me.toolbar.mode.isDesktopApp && me.btnDataFromText.menu.items[1].setVisible(false);
 
                     me.btnTextToColumns.updateHint(me.tipToColumns);
                     me.btnRemoveDuplicates.updateHint(me.tipRemDuplicates);
@@ -394,11 +399,12 @@ define([
             capBtnTextDataValidation: 'Data Validation',
             tipDataValidation: 'Data validation',
             capDataFromText: 'From Text/CSV',
-            tipDataFromText: 'Get data from Text/CSV file',
+            tipDataFromText: 'Get data from file',
             mniFromFile: 'Get Data from File',
             mniFromUrl: 'Get Data from URL',
             capDataExternalLinks: 'External Links',
-            tipExternalLinks: 'View other files this spreadsheet is linked to'
+            tipExternalLinks: 'View other files this spreadsheet is linked to',
+            mniFromXMLFile: 'From Local XML'
         }
     }()), SSE.Views.DataTab || {}));
 });

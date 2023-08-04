@@ -55,6 +55,8 @@
     --f7-picker-item-text-color: rgba(var(--text-normal), 0.45);
     --f7-picker-item-selected-text-color: @text-normal;
 
+    --f7-block-text-color: @text-secondary;
+
     // Main Toolbar
     #editor-navbar.navbar .right a + a,
     #editor-navbar.navbar .left a + a {
@@ -366,12 +368,6 @@
         }
     }
 
-    .about {
-        .logo {
-            margin-top: 20px;
-        }
-    }
-
     .content-block {
         color: @blockTitleColor;
     }
@@ -511,8 +507,8 @@
     }
     
     .actions-button-text {
-        height: 57px;
-        line-height: 57px;
+        // height: 57px;
+        // line-height: 57px;
         font-size: 20px;
         color: @text-normal;
         white-space: normal;
@@ -561,6 +557,77 @@
         }
     }
 
+    // Version History
+    .version-history {
+        &__title {
+            font-style: normal;
+            font-weight: 400;
+            font-size: 13px;
+            line-height: 18px;
+            color: @text-secondary;
+            margin-top: 16px;
+            margin-bottom: 4px;
+        }
+
+        &__btn {
+            font-style: normal;
+            font-weight: 600;
+            font-size: 15px;
+            line-height: 20px;
+            letter-spacing: -0.24px;
+            text-transform: uppercase;
+            color: @brandColor;
+            background: transparent;
+            outline: none;
+            border: 0;
+            padding: 0;
+            margin-top: 22px;
+            width: auto;
+        }
+
+        &__list {
+            .item-title {
+                font-weight: 600;
+                font-size: 13px;
+                line-height: 18px;
+                color: @text-normal;
+                letter-spacing: -0.08px;
+            }
+
+            .item-media, .item-inner {
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+
+            .item-link .item-title-row:before {
+                display: none;
+            }
+
+            .item-subtitle {
+                font-style: normal;
+                font-weight: 400;
+                font-size: 11px;
+                line-height: 13px;
+                color: @text-secondary;
+                margin-top: 3px;
+                letter-spacing: 0.06px;
+            }
+        }
+    }
+
+    .version-history__item_active {
+        background-color: var(--canvas-ruler-margins-background);
+    }
+
+    .btn-close-history {
+        font-style: normal;
+        font-weight: 400;
+        font-size: 17px;
+        line-height: 22px;
+        letter-spacing: -0.41px;
+        color: @brandColor;
+        margin-left: 10px;
+    }
 }
 
 

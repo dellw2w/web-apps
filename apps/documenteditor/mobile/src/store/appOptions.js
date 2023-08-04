@@ -29,21 +29,44 @@ export class storeAppOptions {
             changeViewerMode: action,
 
             isMobileView: observable,
-            changeMobileView: action
+            changeMobileView: action,
+
+            isProtected: observable,
+            setProtection: action,
+
+            typeProtection: observable,
+            setTypeProtection: action,
+
+            isFileEncrypted: observable,
+            setEncryptionFile: action
         });
     }
 
     isEdit = false;
+
+    isFileEncrypted = false;
+    setEncryptionFile(value) {
+        this.isFileEncrypted = value;
+    }
+
+    isProtected = false;
+    setProtection(value) {
+        this.isProtected = value;
+    }
+
+    typeProtection;
+    setTypeProtection(type) {
+        this.typeProtection = type;
+    }
 
     isMobileView = true;
     changeMobileView() {
         this.isMobileView = !this.isMobileView;
     }
 
-
     isViewer = true;
-    changeViewerMode() {
-        this.isViewer = !this.isViewer;
+    changeViewerMode(value) {
+        this.isViewer = value;
     }
 
     canViewComments = false;
@@ -64,8 +87,8 @@ export class storeAppOptions {
         this.readerMode = !this.readerMode;
     }
 
-    canBrandingExt = false;
-    canBranding = false;
+    canBrandingExt = true;
+    canBranding = true;
 
     isDocReady = false;
     changeDocReady (value) {
@@ -95,6 +118,7 @@ export class storeAppOptions {
         this.lang = config.lang;
         this.location = (typeof (config.location) == 'string') ? config.location.toLowerCase() : '';
         this.sharingSettingsUrl = config.sharingSettingsUrl;
+        this.canRequestSharingSettings = config.canRequestSharingSettings;
         this.fileChoiceUrl = config.fileChoiceUrl;
         this.mergeFolderUrl = config.mergeFolderUrl;
         this.canAnalytics = false;
@@ -115,6 +139,7 @@ export class storeAppOptions {
         this.canAnalytics = params.asc_getIsAnalyticsEnable();
         this.canLicense = (licType === Asc.c_oLicenseResult.Success || licType === Asc.c_oLicenseResult.SuccessLimit);
         this.isLightVersion = params.asc_getIsLight();
+        this.buildVersion = params.asc_getBuildVersion();
         this.canCoAuthoring = !this.isLightVersion;
         this.isOffline = Common.EditorApi.get().asc_isOffline();
         this.isReviewOnly = (permissions.review === true) && (permissions.edit === false);
@@ -127,6 +152,7 @@ export class storeAppOptions {
         this.canReview = this.canLicense && this.isEdit && (permissions.review===true);
         this.canUseHistory = this.canLicense && !this.isLightVersion && this.config.canUseHistory && this.canCoAuthoring && !this.isDesktopApp;
         this.canHistoryClose = this.config.canHistoryClose;
+        this.canHistoryRestore= this.config.canHistoryRestore;
         this.canUseMailMerge = this.canLicense && this.canEdit && !this.isDesktopApp;
         this.canSendEmailAddresses = this.canLicense && this.config.canSendEmailAddresses && this.canEdit && this.canCoAuthoring;
         this.canComments = this.canLicense && (permissions.comment === undefined ? this.isEdit : permissions.comment) && (this.config.mode !== 'view');
@@ -145,14 +171,16 @@ export class storeAppOptions {
         this.fileKey = document.key;
         const typeForm = /^(?:(oform))$/.exec(document.fileType); // can fill forms only in oform format
         this.canFillForms = this.canLicense && !!(typeForm && typeof typeForm[1] === 'string') && ((permissions.fillForms===undefined) ? this.isEdit : permissions.fillForms) && (this.config.mode !== 'view');
+        this.canProtect = permissions.protect !== false;
         this.isRestrictedEdit = !this.isEdit && (this.canComments || this.canFillForms) && isSupportEditFeature;
         if (this.isRestrictedEdit && this.canComments && this.canFillForms) // must be one restricted mode, priority for filling forms
             this.canComments = false;
         this.trialMode = params.asc_getLicenseMode();
 
         const type = /^(?:(pdf|djvu|xps|oxps))$/.exec(document.fileType);
-        this.canDownloadOrigin = permissions.download !== false && (type && typeof type[1] === 'string');
-        this.canDownload = permissions.download !== false && (!type || typeof type[1] !== 'string');
+        
+        this.canDownloadOrigin = false;
+        this.canDownload = permissions.download !== false;
         this.canReader = (!type || typeof type[1] !== 'string');
 
         this.canBranding = params.asc_getCustomization();
@@ -170,6 +198,7 @@ export class storeAppOptions {
         this.canUseUserInfoPermissions && AscCommon.UserInfoParser.setUserInfoPermissions(permissions.userInfoGroups);
 
         this.canLiveView = !!params.asc_getLiveViewerSupport() && (this.config.mode === 'view') && !(type && typeof type[1] === 'string') && isSupportEditFeature;
+        this.isAnonymousSupport = !!Common.EditorApi.get().asc_isAnonymousSupport();
     }
     setCanViewReview (value) {
         this.canViewReview = value;

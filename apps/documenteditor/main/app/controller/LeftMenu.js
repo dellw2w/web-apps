@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2019
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -29,7 +28,7 @@
  * Creative Commons Attribution-ShareAlike 4.0 International. See the License
  * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
  *
-*/
+ */
 /**
  *    LeftMenu.js
  *
@@ -115,6 +114,7 @@ define([
                     this.clickMenuFileItem(null, 'history');
             }, this));
             Common.NotificationCenter.on('protect:doclock', _.bind(this.onChangeProtectDocument, this));
+            Common.NotificationCenter.on('file:print', _.bind(this.clickToolbarPrint, this));
         },
 
         onLaunch: function() {
@@ -129,21 +129,20 @@ define([
                     isCommentsOnly: false
                 }
             };
-            Common.util.Shortcuts.delegateShortcuts({
-                shortcuts: {
-                    'command+shift+s,ctrl+shift+s': _.bind(this.onShortcut, this, 'save'),
-                    'command+f,ctrl+f': _.bind(this.onShortcut, this, 'search'),
-                    'ctrl+h': _.bind(this.onShortcut, this, 'replace'),
-                    'alt+f': _.bind(this.onShortcut, this, 'file'),
-                    'esc': _.bind(this.onShortcut, this, 'escape'),
-                    /** coauthoring begin **/
-                    'alt+q': _.bind(this.onShortcut, this, 'chat'),
-                    'command+shift+h,ctrl+shift+h': _.bind(this.onShortcut, this, 'comments'),
-                    /** coauthoring end **/
-                    'f1': _.bind(this.onShortcut, this, 'help')
-                }
-            });
 
+            var keymap = {
+                'command+shift+s,ctrl+shift+s': _.bind(this.onShortcut, this, 'save'),
+                'command+f,ctrl+f': _.bind(this.onShortcut, this, 'search'),
+                'ctrl+h': _.bind(this.onShortcut, this, 'replace'),
+                'esc': _.bind(this.onShortcut, this, 'escape'),
+                /** coauthoring begin **/
+                'command+shift+h,ctrl+shift+h': _.bind(this.onShortcut, this, 'comments'),
+                /** coauthoring end **/
+                'f1': _.bind(this.onShortcut, this, 'help')
+            };
+            keymap[Common.Utils.isMac ? 'ctrl+alt+f' : 'alt+f'] = _.bind(this.onShortcut, this, 'file');
+            keymap[Common.Utils.isMac ? 'ctrl+alt+q' : 'alt+q'] = _.bind(this.onShortcut, this, 'chat');
+            Common.util.Shortcuts.delegateShortcuts({shortcuts:keymap});
             Common.util.Shortcuts.suspendEvents();
         },
 
@@ -189,7 +188,8 @@ define([
                 Common.util.Shortcuts.removeShortcuts({
                     shortcuts: {
                         'command+shift+s,ctrl+shift+s': _.bind(this.onShortcut, this, 'save'),
-                        'alt+f': _.bind(this.onShortcut, this, 'file')
+                        'alt+f': _.bind(this.onShortcut, this, 'file'),
+                        'ctrl+alt+f': _.bind(this.onShortcut, this, 'file')
                     }
                 });
 
@@ -335,7 +335,7 @@ define([
                             }
                         }, this)
                     });
-                } else if (format == Asc.c_oAscFileType.DOCX) {
+                } else if (format == Asc.c_oAscFileType.DOCX || format == Asc.c_oAscFileType.DOCM || format == Asc.c_oAscFileType.DOTX) {
                     if (!Common.Utils.InternalSettings.get("de-settings-compatible") && !Common.localStorage.getBool("de-hide-save-compatible") && this.api.asc_isCompatibilityMode()) {
                         Common.UI.warning({
                             closable: false,
@@ -348,6 +348,7 @@ define([
                                 if (dontshow) Common.localStorage.setItem("de-hide-save-compatible", 1);
                                 if (btn == 'ok') {
                                     this.isFromFileDownloadAs = ext;
+                                    options.asc_setCompatible(false);
                                     this.api.asc_DownloadAs(options);
                                     menu.hide();
                                 }
@@ -377,7 +378,7 @@ define([
                 if (format===undefined) {
                     this._saveAsFormat(undefined, format, ext); // download original
                     menu && menu.hide();
-                } else if (format == Asc.c_oAscFileType.PDF || format == Asc.c_oAscFileType.PDFA)
+                } else if (format == Asc.c_oAscFileType.PDF || format == Asc.c_oAscFileType.PDFA || format == Asc.c_oAscFileType.JPG || format == Asc.c_oAscFileType.PNG)
                     this._saveAsFormat(menu, format, ext);
                 else {
                     if (format == Asc.c_oAscFileType.TXT || format == Asc.c_oAscFileType.RTF) // don't show message about pdf/xps/oxps
@@ -514,6 +515,10 @@ define([
                 value = parseInt(Common.localStorage.getItem("de-settings-paste-button"));
                 Common.Utils.InternalSettings.set("de-settings-paste-button", value);
                 this.api.asc_setVisiblePasteButton(!!value);
+
+                value = Common.localStorage.getBool("de-settings-smart-selection");
+                Common.Utils.InternalSettings.set("de-settings-smart-selection", value);
+                this.api.asc_putSmartParagraphSelection(value);
             }
 
             this.api.put_ShowSnapLines(Common.Utils.InternalSettings.get("de-settings-showsnaplines"));
@@ -558,6 +563,13 @@ define([
                 this.leftMenu.menuFile.hide();
         },
 
+        clickToolbarPrint: function () {
+            if (this.mode.canPreviewPrint)
+                this.leftMenu.showMenu('file:printpreview');
+            else if (this.mode.canPrint)
+                this.clickMenuFileItem(null, 'print');
+        },
+
         changeToolbarSaveState: function (state) {
             var btnSave = this.leftMenu.menuFile.getButton('save');
             btnSave && btnSave.setDisabled(state);
@@ -594,7 +606,7 @@ define([
         },
 
         updatePreviewMode: function() {
-            var viewmode = this._state.disableEditing || this._state.docProtection.isReadOnly || this._state.docProtection.isFormsOnly;
+            var viewmode = this._state.disableEditing || this._state.docProtection.isReadOnly || this._state.docProtection.isFormsOnly || this._state.docProtection.isCommentsOnly;
             if (this.viewmode === viewmode) return;
             this.viewmode = viewmode;
 
@@ -881,6 +893,7 @@ define([
         onShowHideSearch: function (state, findText) {
             if (state) {
                 Common.UI.Menu.Manager.hideAll();
+                this.tryToShowLeftMenu();
                 this.leftMenu.showMenu('advancedsearch', undefined, true);
                 this.leftMenu.fireEvent('search:aftershow', this.leftMenu, findText);
             } else {

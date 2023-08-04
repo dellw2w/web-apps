@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2022
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -29,7 +28,7 @@
  * Creative Commons Attribution-ShareAlike 4.0 International. See the License
  * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
  *
-*/
+ */
 /**
  *
  *  ExternalLinksDlg.js
@@ -51,7 +50,7 @@ define([
 
         options: {
             alias: 'ExternalLinksDlg',
-            contentWidth: 450,
+            contentWidth: 500,
             height: 294,
             buttons: null
         },
@@ -67,16 +66,15 @@ define([
                                 '<table cols="1" style="width: 100%;">',
                                     '<tr>',
                                         '<td class="padding-large">',
-                                            '<div id="external-links-btn-update" style="display: inline-block;margin-right: 5px;"></div>',
-                                            '<div id="external-links-btn-delete" style="display: inline-block;margin-right: 5px;"></div>',
-                                            // '<button type="button" class="btn btn-text-default auto sort-dialog-btn-text" id="external-links-btn-open">', me.textOpen ,'</button>',
-                                            // '<button type="button" class="btn btn-text-default auto sort-dialog-btn-text" id="external-links-btn-change">', me.textChange ,'</button>',
+                                            '<div id="external-links-btn-update" class="float-left margin-right-5"></div>',
+                                            '<div id="external-links-btn-change" class="float-left margin-right-5"></div>',
+                                            '<div id="external-links-btn-open" class="float-left margin-right-5"></div>',
+                                            '<div id="external-links-btn-delete" class="float-left"></div>',
                                         '</td>',
                                     '</tr>',
                                     '<tr>',
                                         '<td class="padding-small">',
-                                            '<label class="header">', me.textSource,'</label>',
-                                            '<div id="external-links-list" class="range-tableview" style="width:100%; height: 148px;"></div>',
+                                            '<div id="external-links-list" class="range-tableview" style="width:100%; height: 171px;"></div>',
                                         '</td>',
                                     '</tr>',
                                 '</table>',
@@ -91,6 +89,15 @@ define([
 
             this.api        = options.api;
             this.handler    = options.handler;
+            this.isUpdating = options.isUpdating || false;
+            this.canRequestReferenceData = options.canRequestReferenceData || false;
+            this.canRequestOpen = options.canRequestOpen || false;
+            this.canRequestReferenceSource = options.canRequestReferenceSource || false;
+            this.isOffline = options.isOffline || false;
+            this.linkStatus = [];
+            this.wrapEvents = {
+                onUpdateExternalReferenceList: _.bind(this.refreshList, this)
+            };
 
             Common.Views.AdvancedSettingsWindow.prototype.initialize.call(this, this.options);
         },
@@ -102,14 +109,28 @@ define([
                 el: $('#external-links-list', this.$window),
                 store: new Common.UI.DataViewStore(),
                 simpleAddMode: true,
+                headers: [
+                    {name: me.textSource, width: 240},
+                    {name: me.textStatus, width: 175}
+                ],
+                itemTemplate: _.template([
+                    '<div id="<%= id %>" class="list-item" style="width: 100%;display:inline-block;">',
+                        '<div class="padding-right-5" style="width:240px;" data-toggle="tooltip"><%= value %></div>',
+                        '<div style="width:175px;" data-toggle="tooltip"><%= status %></div>',
+                    '</div>'
+                ].join('')),
                 tabindex: 1
             });
+            this.linksList.on('item:add', _.bind(this.addTooltips, this));
+            this.linksList.on('item:change', _.bind(this.addTooltips, this));
+            this.linksList.on('reset:before', _.bind(this.resetItemsBefore, this));
 
             this.btnUpdate = new Common.UI.Button({
                 parentEl: $('#external-links-btn-update', this.$window),
                 cls: 'btn-text-split-default auto',
                 caption: this.textUpdate,
                 split: true,
+                visible: !!this.canRequestReferenceData,
                 menu        : new Common.UI.Menu({
                     style: 'min-width:100px;',
                     items: [
@@ -123,7 +144,8 @@ define([
                         }]
                 })
             });
-            $(this.btnUpdate.cmpEl.find('button')[0]).css('min-width', '87px');
+            var el = $(this.btnUpdate.cmpEl.find('button')[0]);
+            el.css('min-width', Math.max(87, el.outerWidth()) + 'px');
             this.btnUpdate.on('click', _.bind(this.onUpdate, this));
             this.btnUpdate.menu.on('item:click', _.bind(this.onUpdateMenu, this));
 
@@ -150,12 +172,18 @@ define([
             this.btnDelete.menu.on('item:click', _.bind(this.onDeleteMenu, this));
 
             this.btnOpen = new Common.UI.Button({
-                el: $('#external-links-btn-open', this.$window)
+                parentEl: $('#external-links-btn-open', this.$window),
+                cls: 'btn-text-default auto',
+                caption: this.textOpen,
+                visible: !!this.canRequestOpen
             });
             this.btnOpen.on('click', _.bind(this.onOpen, this));
 
             this.btnChange = new Common.UI.Button({
-                el: $('#external-links-btn-change', this.$window)
+                parentEl: $('#external-links-btn-change', this.$window),
+                cls: 'btn-text-default auto',
+                caption: this.textChange,
+                visible: !!this.canRequestReferenceSource
             });
             this.btnChange.on('click', _.bind(this.onChange, this));
 
@@ -164,10 +192,18 @@ define([
 
         afterRender: function() {
             this._setDefaults();
+            this.api.asc_registerCallback('asc_onUpdateExternalReferenceList', this.wrapEvents.onUpdateExternalReferenceList);
+            this.isUpdating && this.setIsUpdating(this.isUpdating, true);
         },
 
         getFocusedComponents: function() {
-            return [ this.btnUpdate, this.btnDelete, this.btnOpen, this.btnChange, this.linksList ];
+            return [ this.btnUpdate, this.btnChange, this.btnOpen, this.btnDelete, this.linksList ];
+        },
+
+        close: function () {
+            this.api.asc_unregisterCallback('asc_onUpdateExternalReferenceList', this.wrapEvents.onUpdateExternalReferenceList);
+
+            Common.Views.AdvancedSettingsWindow.prototype.close.call(this);
         },
 
         getDefaultFocusableComponent: function () {
@@ -184,30 +220,38 @@ define([
             if (links) {
                 for (var i=0; i<links.length; i++) {
                     arr.push({
-                        value: links[i].asc_getSource(),
+                        linkid: links[i].asc_getId(),
+                        value: (links[i].asc_getSource() || '').replace(new RegExp("%20",'g')," "),
                         idx: i,
-                        externalRef: links[i]
+                        externalRef: links[i],
+                        status: this.linkStatus[links[i].asc_getId()] || this.textUnknown
                     });
                 }
             }
             this.linksList.store.reset(arr);
             (this.linksList.store.length>0) && this.linksList.selectByIndex(0);
-            this.btnUpdate.setDisabled(this.linksList.store.length<1 || !this.linksList.getSelectedRec());
-            this.btnDelete.setDisabled(this.linksList.store.length<1 || !this.linksList.getSelectedRec());
-            this.btnOpen.setDisabled(this.linksList.store.length<1 || !this.linksList.getSelectedRec());
-            this.btnChange.setDisabled(this.linksList.store.length<1 || !this.linksList.getSelectedRec());
+            this.updateButtons();
         },
 
         onUpdate: function() {
+            if (this.isUpdating) return;
+
             var rec = this.linksList.getSelectedRec();
-            rec && this.api.asc_updateExternalReferences([rec.get('externalRef')]);
+            if (rec) {
+                this.isOffline && this.setLinkStatus(rec.get('linkid'), this.textOk);
+                this.api.asc_updateExternalReferences([rec.get('externalRef')]);
+            }
         },
 
         onUpdateMenu: function(menu, item) {
+            if (this.isUpdating) return;
+
             if (item.value == 1) {
-                var arr = [];
+                var arr = [],
+                    me = this;
                 this.linksList.store.each(function(item){
                     arr.push(item.get('externalRef'));
+                    me.isOffline && me.setLinkStatus(item.get('linkid'), me.textOk);
                 }, this);
                 (arr.length>0) && this.api.asc_updateExternalReferences(arr);
             } else
@@ -215,12 +259,16 @@ define([
         },
 
         onDelete: function() {
+            if (this.isUpdating) return;
+
             var rec = this.linksList.getSelectedRec();
             rec && this.api.asc_removeExternalReferences([rec.get('externalRef')]);
             this.refreshList();
         },
 
         onDeleteMenu: function(menu, item) {
+            if (this.isUpdating) return;
+
             if (item.value == 1) {
                 var arr = [];
                 this.linksList.store.each(function(item){
@@ -233,11 +281,132 @@ define([
         },
 
         onOpen: function() {
-
+            var rec = this.linksList.getSelectedRec();
+            if (rec) {
+                var data = this.api.asc_openExternalReference(rec.get('externalRef'));
+                if (data) {
+                    switch (data.asc_getType()) {
+                        case Asc.c_oAscExternalReferenceType.link:
+                            data = {link: data.asc_getData()};
+                            break;
+                        case Asc.c_oAscExternalReferenceType.path:
+                            data = {path: data.asc_getData()};
+                            break;
+                        case Asc.c_oAscExternalReferenceType.referenceData:
+                            data = {
+                                referenceData: data.asc_getData(),
+                                path: data.asc_getPath()
+                            };
+                            break;
+                    }
+                    data.windowName = 'wname-' + Date.now();
+                    window.open("", data.windowName);
+                    Common.Gateway.requestOpen(data);
+                }
+            }
         },
 
         onChange: function() {
+            var rec = this.linksList.getSelectedRec();
+            if (rec) {
+                if (this.isOffline)
+                    this.api.updateSourceFromFile(rec.get('externalRef'));
+                else
+                    this.fireEvent('change:source', this, rec.get('externalRef'));
 
+            }
+        },
+
+        updateButtons: function() {
+            var selected = this.linksList.store.length>0 && !!this.linksList.getSelectedRec();
+            this.btnUpdate.setDisabled(!selected || this.isUpdating);
+            this.btnDelete.setDisabled(!selected || this.isUpdating);
+            this.btnOpen.setDisabled(!selected || this.isUpdating);
+            this.btnChange.setDisabled(!selected || this.isUpdating);
+        },
+
+        setIsUpdating: function(status, immediately) {
+            immediately = immediately || !status; // set timeout when start updating only
+            this.isUpdating = status;
+            if (!status && this.timerId) {
+                clearTimeout(this.timerId);
+                this.timerId = 0;
+            }
+            if (immediately) {
+                this.updateButtons();
+                this.btnUpdate.setCaption(status ? this.textUpdating : this.textUpdate);
+            } else if (!this.timerId) {
+                var me = this;
+                me.timerId = setTimeout(function () {
+                    me.updateButtons();
+                    me.btnUpdate.setCaption(status ? me.textUpdating : me.textUpdate);
+                },500);
+            }
+            !status && this.refreshList();
+        },
+
+        setLinkStatus: function(id, result) {
+            if (!id) return;
+            this.linkStatus[id] = result || this.textOk;
+        },
+
+        resetItemsBefore: function (dataview) {
+            dataview.dataViewItems && _.each(dataview.dataViewItems, function(view) {
+                if (view.tipsArray) {
+                    view.tipsArray.forEach(function (item) {
+                        if (item) {
+                            if (item.dontShow===undefined)
+                                item.dontShow = true;
+                            (item.tip()).remove();
+                        }
+                    });
+                }
+            }, this);
+        },
+
+        addTooltips: function (dataview, view, record) {
+            if (view.tipsArray) {
+                view.tipsArray.forEach(function (item) {
+                    if (item) {
+                        if (item.dontShow===undefined)
+                            item.dontShow = true;
+                        (item.tip()).remove();
+                    }
+                });
+            }
+
+            var el = document.createElement('span');
+            el.style.fontSize = document.documentElement.style.getPropertyValue("--font-size-base-app-custom") || '11px';
+            el.style.fontFamily = document.documentElement.style.getPropertyValue("--font-family-base-custom") || 'Arial, Helvetica, "Helvetica Neue", sans-serif';
+            el.style.position = "absolute";
+            el.style.top = '-1000px';
+            el.style.left = '-1000px';
+            document.body.appendChild(el);
+
+            var divs = $(view.el).find('.list-item > div');
+            this.checkTextOfItem(el, view, $(divs[0]), record.get('value'), this.linksList.options.headers[0].width );
+            this.checkTextOfItem(el, view, $(divs[1]), record.get('status'), this.linksList.options.headers[1].width );
+
+            document.body.removeChild(el);
+            view.tipsArray = [];
+        },
+
+        checkTextOfItem: function (test_el, view, div, txt, limit ) {
+            test_el.innerHTML = txt;
+
+            var dataview = this.linksList;
+            if (test_el.offsetWidth > limit) {
+                div.one('mouseenter', function(e){ // hide tooltip when mouse is over menu
+                    var $target = $(e.target);
+                    $target.tooltip({
+                        title       : txt, // use actual tip, because it can be changed
+                        placement   : 'cursor',
+                        zIndex : dataview.tipZIndex
+                    });
+                    $target.mouseenter();
+                    view.tipsArray.push($target.data('bs.tooltip'));
+                });
+            }
         },
 
         txtTitle: 'External Links',
@@ -248,7 +417,11 @@ define([
         textDelete: 'Break Links',
         textDeleteAll: 'Break All Links',
         textOpen: 'Open Source',
-        textChange: 'Change Source'
+        textChange: 'Change Source',
+        textStatus: 'Status',
+        textOk: 'OK',
+        textUnknown: 'Unknown',
+        textUpdating: 'Updating...'
 
     }, SSE.Views.ExternalLinksDlg || {}));
 });

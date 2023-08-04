@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2019
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -36,7 +35,7 @@
     !common.controller && (common.controller = {});
 
     common.controller.modals = new(function() {
-        var $dlgShare, $dlgEmbed;
+        var $dlgShare, $dlgEmbed, $dlgPassword;
         var appConfig;
         var embedCode = '<iframe allowtransparency="true" frameborder="0" scrolling="no" src="{embed-url}" width="{width}" height="{height}"></iframe>',
             minEmbedWidth = 400,
@@ -105,6 +104,41 @@
             });
         };
 
+        var createDlgPassword = function (submitCallback) {
+            var delayFocus = 500;
+            if(!$dlgPassword) {
+                var submit = function() {
+                    var inputVal = $dlgPassword.find('#password-input').val();
+                    if (submitCallback && inputVal.length > 0) {
+                        submitCallback($dlgPassword.find('#password-input').val());
+                        $dlgPassword.modal('hide');
+                    }
+                };
+                $dlgPassword = common.view.modals.create('password');
+                $dlgPassword.modal({backdrop: 'static', keyboard: false})  
+                $dlgPassword.modal('show');
+                $dlgPassword.find('#password-btn').on('click', function() {
+                    submit();
+                });
+                $dlgPassword.find('#password-input').keyup(function(e){ 
+                    if(e.key == "Enter") {
+                        submit();
+                    }
+                });
+            } else {
+                $dlgPassword.find('#password-input').addClass('error');
+                $dlgPassword.find('#password-label-error').addClass('error');
+                $dlgPassword.find('#password-input').val('');
+                setTimeout(function() {
+                    $dlgPassword.modal('show');
+                }, 200);
+                delayFocus = 700;
+            }
+            setTimeout(function() {
+                $dlgPassword.find('#password-input').focus();
+            }, delayFocus);
+        };
+
         function updateEmbedCode(){
             var $txtwidth = $dlgEmbed.find('#txt-embed-width');
             var $txtheight = $dlgEmbed.find('#txt-embed-height');
@@ -146,8 +180,9 @@
         };
 
         return {
-            init: function(config) { appConfig = config; }
-            , attach: attachToView
+            init: function(config) { appConfig = config; }, 
+            attach: attachToView,
+            createDlgPassword: createDlgPassword
         };
     });
 }();

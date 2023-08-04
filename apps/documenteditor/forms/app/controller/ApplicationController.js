@@ -1,3 +1,34 @@
+/*
+ * (c) Copyright Ascensio System SIA 2010-2023
+ *
+ * This program is a free software product. You can redistribute it and/or
+ * modify it under the terms of the GNU Affero General Public License (AGPL)
+ * version 3 as published by the Free Software Foundation. In accordance with
+ * Section 7(a) of the GNU AGPL its Section 15 shall be amended to the effect
+ * that Ascensio System SIA expressly excludes the warranty of non-infringement
+ * of any third-party rights.
+ *
+ * This program is distributed WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
+ * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
+ *
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
+ * street, Riga, Latvia, EU, LV-1050.
+ *
+ * The  interactive user interfaces in modified source and object code versions
+ * of the Program must display Appropriate Legal Notices, as required under
+ * Section 5 of the GNU AGPL version 3.
+ *
+ * Pursuant to Section 7(b) of the License you must retain the original Product
+ * logo when distributing the program. Pursuant to Section 7(e) we decline to
+ * grant you any rights under trademark law for use of our trademarks.
+ *
+ * All the Product's GUI elements, including illustrations and icon sets, as
+ * well as technical writing content are licensed under the terms of the
+ * Creative Commons Attribution-ShareAlike 4.0 International. See the License
+ * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
+ *
+ */
 define([
     'core',
     'irregularstack',
@@ -437,9 +468,11 @@ define([
             this.appOptions.fileChoiceUrl   = this.editorConfig.fileChoiceUrl;
             this.appOptions.saveAsUrl       = this.editorConfig.saveAsUrl;
             this.appOptions.canRequestSaveAs = this.editorConfig.canRequestSaveAs;
-            this.appOptions.isDesktopApp    = this.editorConfig.targetApp == 'desktop';
+            this.appOptions.isDesktopApp    = this.editorConfig.targetApp == 'desktop' || Common.Controllers.Desktop.isActive();
             this.appOptions.lang            = this.editorConfig.lang;
             this.appOptions.canPlugins      = false;
+
+            Common.Controllers.Desktop.init(this.appOptions);
         },
 
         onExternalMessage: function(msg) {
@@ -550,10 +583,10 @@ define([
 
         onEditorPermissions: function(params) {
             var licType = params.asc_getLicenseType();
-            if (Asc.c_oLicenseResult.Expired === licType || Asc.c_oLicenseResult.Error === licType || Asc.c_oLicenseResult.ExpiredTrial === licType) {
+            if (Asc.c_oLicenseResult.Expired === licType || Asc.c_oLicenseResult.Error === licType || Asc.c_oLicenseResult.ExpiredTrial === licType || Asc.c_oLicenseResult.NotBefore === licType) {
                 Common.UI.warning({
-                    title: this.titleLicenseExp,
-                    msg: this.warnLicenseExp,
+                    title: Asc.c_oLicenseResult.NotBefore === licType ? this.titleLicenseNotActive : this.titleLicenseExp,
+                    msg: Asc.c_oLicenseResult.NotBefore === licType ? this.warnLicenseBefore : this.warnLicenseExp,
                     buttons: [],
                     closable: false
                 });
@@ -586,6 +619,7 @@ define([
             this.appOptions.canPrint          = (this.permissions.print !== false);
 
             this.appOptions.fileKey = this.document.key;
+            this.appOptions.isAnonymousSupport = !!this.api.asc_isAnonymousSupport();
 
             AscCommon.UserInfoParser.setParser(true);
             AscCommon.UserInfoParser.setCurrentName(this.appOptions.user.fullname);
@@ -603,6 +637,9 @@ define([
                 me.view.btnPrev.setVisible(false);
                 me.view.btnNext.setVisible(false);
                 me.view.btnClear.setVisible(false);
+                me.view.btnUndo.setVisible(false);
+                me.view.btnRedo.setVisible(false);
+                me.view.btnRedo.$el.next().hide();
             } else {
                 me.view.btnPrev.on('click', function(){
                     me.api.asc_MoveToFillingForm(false);
@@ -625,6 +662,12 @@ define([
                             me.api.asc_DownloadAs(new Asc.asc_CDownloadOptions(Asc.c_oAscFileType.PDF, me.isFromBtnDownload));
                         }
                     }
+                });
+                me.view.btnUndo.on('click', function(){
+                    me.api.Undo(false);
+                });
+                me.view.btnRedo.on('click', function(){
+                    me.api.Redo(false);
                 });
 
                 this.api.asc_setRestriction(Asc.c_oAscRestrictionType.OnlyForms);
@@ -686,7 +729,15 @@ define([
         },
 
         applyLicense: function() {
-            if (this._state.licenseType) {
+            if (!this.appOptions.isAnonymousSupport && !!this.appOptions.user.anonymous) {
+                this.api.asc_coAuthoringDisconnect();
+                Common.NotificationCenter.trigger('api:disconnect');
+                Common.UI.warning({
+                    title: this.notcriticalErrorTitle,
+                    msg  : this.warnLicenseAnonymous,
+                    buttons: ['ok']
+                });
+            } else if (this._state.licenseType) {
                 var license = this._state.licenseType,
                     buttons = ['ok'],
                     primary = 'ok';
@@ -702,6 +753,7 @@ define([
                 }
 
                 if (this._state.licenseType!==Asc.c_oLicenseResult.SuccessLimit && this.appOptions.canFillForms) {
+                    this.api.asc_coAuthoringDisconnect();
                     Common.NotificationCenter.trigger('api:disconnect');
                 }
 
@@ -832,7 +884,7 @@ define([
                             }
                         } else {
                             Common.Gateway.requestClose();
-                            DE.Controllers.Desktop.requestClose();
+                            Common.Controllers.Desktop.requestClose();
                         }
                         me._openDlg = null;
                     }
@@ -1311,7 +1363,8 @@ define([
                 });
 
             }
-            this.cmpCalendar.setDate(new Date(specProps ? specProps.get_FullDate() : undefined));
+            var val = specProps ? specProps.get_FullDate() : undefined;
+            this.cmpCalendar.setDate(val ? new Date(val) : new Date());
 
             // align
             var offset  = controlsContainer.offset(),
@@ -1343,6 +1396,7 @@ define([
             me._isDocReady = true;
             this.hidePreloader();
             this.onLongActionEnd(Asc.c_oAscAsyncActionType['BlockInteraction'], LoadingDocument);
+            Common.NotificationCenter.trigger('app:ready', this.appOptions);
 
             var zf = (this.appOptions.customization && this.appOptions.customization.zoom ? parseInt(this.appOptions.customization.zoom) : 100);
             (zf == -1) ? this.api.zoomFitToPage() : ((zf == -2) ? this.api.zoomFitToWidth() : this.api.zoom(zf>0 ? zf : 100));
@@ -1363,6 +1417,8 @@ define([
             if (this.appOptions.canFillForms) {
                 this.api.asc_registerCallback('asc_onShowContentControlsActions', _.bind(this.onShowContentControlsActions, this));
                 this.api.asc_registerCallback('asc_onHideContentControlsActions', _.bind(this.onHideContentControlsActions, this));
+                this.api.asc_registerCallback('asc_onCanUndo', _.bind(this.onApiCanRevert, this, 'undo'));
+                this.api.asc_registerCallback('asc_onCanRedo', _.bind(this.onApiCanRevert, this, 'redo'));
                 this.api.asc_SetHighlightRequiredFields(true);
                 Common.Gateway.on('insertimage',        _.bind(this.insertImage, this));
                 Common.NotificationCenter.on('storage:image-load', _.bind(this.openImageFromStorage, this)); // try to load image from storage
@@ -1384,10 +1440,20 @@ define([
 
             Common.Gateway.documentReady();
             Common.Analytics.trackEvent('Load', 'Complete');
+            Common.NotificationCenter.trigger('document:ready');
         },
 
         onOptionsClick: function(menu, item, e) {
             switch (item.value) {
+                case 'undo':
+                    this.api.Undo(false);
+                    break;
+                case 'redo':
+                    this.api.Redo(false);
+                    break;
+                case 'clear':
+                    this.api.asc_ClearAllSpecialForms();
+                    break;
                 case 'fullscr':
                     this.onHyperlinkClick(this.embedConfig.fullscreenUrl);
                     break;
@@ -1404,7 +1470,7 @@ define([
                     Common.Analytics.trackEvent('Print');
                     break;
                 case 'close':
-                    if (!DE.Controllers.Desktop.process('goback') &&
+                    if (!Common.Controllers.Desktop.process('goback') &&
                             this.appOptions.customization && this.appOptions.customization.goback)
                     {
                         if (this.appOptions.customization.goback.requestClose && this.appOptions.canRequestClose)
@@ -1505,60 +1571,76 @@ define([
                 var last; // divider item
 
                 // download and print
-                if (!menuItems[0].isVisible() && !menuItems[1].isVisible() && !menuItems[2].isVisible() && !menuItems[3].isVisible())
-                    menuItems[4].setVisible(false);
-                else
-                    last = menuItems[4];
-
-                // theme and zoom
-                if (!menuItems[7].isVisible() && !menuItems[8].isVisible())
+                if (!menuItems[5].isVisible() && !menuItems[6].isVisible() && !menuItems[7].isVisible() && !menuItems[8].isVisible())
                     menuItems[9].setVisible(false);
                 else
                     last = menuItems[9];
 
-                // share, location
-                if (!menuItems[10].isVisible() && !menuItems[11].isVisible())
-                    menuItems[12].setVisible(false);
+                // theme and zoom
+                if (!menuItems[12].isVisible() && !menuItems[13].isVisible())
+                    menuItems[14].setVisible(false);
                 else
-                    last = menuItems[12];
+                    last = menuItems[14];
+
+                // share, location
+                if (!menuItems[15].isVisible() && !menuItems[16].isVisible())
+                    menuItems[17].setVisible(false);
+                else
+                    last = menuItems[17];
 
                 // embed, fullscreen
-                if (!menuItems[13].isVisible() && !menuItems[14].isVisible())
+                if (!menuItems[18].isVisible() && !menuItems[19].isVisible())
                     last && last.setVisible(false);
 
                 menu.off('show:after', initMenu);
             };
 
+            if (!this.appOptions.canFillForms) {
+                menuItems[0].setVisible(false); // undo
+                menuItems[1].setVisible(false); // redo
+                menuItems[2].setVisible(false); // --
+                menuItems[3].setVisible(false); // clear
+                menuItems[4].setVisible(false); // --
+            }
+
             if (!this.appOptions.canPrint) {
-                menuItems[3].setVisible(false);
+                menuItems[8].setVisible(false);
                 itemsCount--;
             }
 
             if ( !this.embedConfig.saveUrl || !this.appOptions.canDownload || this.appOptions.isOFORM) {
-                menuItems[0].setVisible(false);
+                menuItems[5].setVisible(false);
                 itemsCount--;
             }
 
             if ( !this.appOptions.isOFORM || !this.appOptions.canDownload || this.appOptions.isOffline) {
-                menuItems[1].setVisible(false);
-                menuItems[2].setVisible(false);
+                menuItems[6].setVisible(false);
+                menuItems[7].setVisible(false);
                 itemsCount -= 2;
             }
 
             if (Common.UI.Themes.available()) {
-                var current = Common.UI.Themes.currentThemeId();
-                for (var t in Common.UI.Themes.map()) {
-                    this.view.mnuThemes.addItem(new Common.UI.MenuItem({
-                        caption     : Common.UI.Themes.get(t).text,
-                        value       : t,
-                        toggleGroup : 'themes',
-                        checkable   : true,
-                        checked     : t===current
-                    }));
+                const _fill_themes = function () {
+                    const _menu = this.view.mnuThemes;
+                    _menu.removeAll();
+
+                    const _current = Common.UI.Themes.currentThemeId();
+                    for (const t in Common.UI.Themes.map()) {
+                        _menu.addItem(new Common.UI.MenuItem({
+                            caption     : Common.UI.Themes.get(t).text,
+                            value       : t,
+                            toggleGroup : 'themes',
+                            checkable   : true,
+                            checked     : t === _current
+                        }));
+                    }
                 }
+
+                Common.NotificationCenter.on('uitheme:countchanged', _fill_themes.bind(this));
+                _fill_themes.call(this);
             }
             if (this.view.mnuThemes.items.length<1) {
-                menuItems[7].setVisible(false);
+                menuItems[12].setVisible(false);
                 itemsCount--;
             } else {
                 this.view.menuItemsDarkMode = new Common.UI.MenuItem({
@@ -1576,22 +1658,25 @@ define([
             }
 
             if ( !this.embedConfig.shareUrl || this.appOptions.isOFORM) {
-                menuItems[10].setVisible(false);
+                menuItems[15].setVisible(false);
                 itemsCount--;
             }
 
             if (!this.appOptions.canBackToFolder) {
-                menuItems[11].setVisible(false);
+                menuItems[16].setVisible(false);
                 itemsCount--;
+            } else {
+                var text = this.appOptions.customization.goback.text;
+                text && (typeof text == 'string') && menuItems[16].setCaption(text);
             }
 
             if ( !this.embedConfig.embedUrl || this.appOptions.isOFORM) {
-                menuItems[13].setVisible(false);
+                menuItems[18].setVisible(false);
                 itemsCount--;
             }
 
             if ( !this.embedConfig.fullscreenUrl || this.appOptions.isOFORM) {
-                menuItems[14].setVisible(false);
+                menuItems[19].setVisible(false);
                 itemsCount--;
             }
             if (itemsCount<1)
@@ -1800,9 +1885,10 @@ define([
                 this.textMenu.items[0].setDisabled(disabled || !this.api.asc_getCanUndo()); // undo
                 this.textMenu.items[1].setDisabled(disabled || !this.api.asc_getCanRedo()); // redo
 
-                this.textMenu.items[3].setDisabled(disabled || !cancopy); // cut
-                this.textMenu.items[4].setDisabled(!cancopy); // copy
-                this.textMenu.items[5].setDisabled(disabled) // paste;
+                this.textMenu.items[3].setDisabled(disabled); // clear
+                this.textMenu.items[5].setDisabled(disabled || !cancopy); // cut
+                this.textMenu.items[6].setDisabled(!cancopy); // copy
+                this.textMenu.items[7].setDisabled(disabled) // paste;
 
                 this.showPopupMenu(this.textMenu, {}, event);
             }
@@ -1832,6 +1918,14 @@ define([
                         }
                     }
                     break;
+                case 'clear':
+                    if (this.api) {
+                        var props = this.api.asc_IsContentControl() ? this.api.asc_GetContentControlProperties() : null;
+                        if (props) {
+                            this.api.asc_ClearContentControl(props.get_InternalId());
+                        }
+                    }
+                    break;
             }
         },
 
@@ -1839,16 +1933,33 @@ define([
             this._state.isDisconnected = true;
             this._isDisabled = true;
             this.view && this.view.btnClear && this.view.btnClear.setDisabled(true);
+            this.view && this.view.btnUndo && this.view.btnUndo.setDisabled(true);
+            this.view && this.view.btnRedo && this.view.btnRedo.setDisabled(true);
+            if (this.view && this.view.btnOptions && this.view.btnOptions.menu) {
+                this.view.btnOptions.menu.items[0].setDisabled(true); // undo
+                this.view.btnOptions.menu.items[1].setDisabled(true); // redo
+                this.view.btnOptions.menu.items[3].setDisabled(true); // clear
+            }
             if (!enableDownload) {
                 this.appOptions.canPrint = this.appOptions.canDownload = false;
                 this.view && this.view.btnDownload.setDisabled(true);
                 this.view && this.view.btnSubmit.setDisabled(true);
                 if (this.view && this.view.btnOptions && this.view.btnOptions.menu) {
-                    this.view.btnOptions.menu.items[3].setDisabled(true); // print
-                    this.view.btnOptions.menu.items[0].setDisabled(true); // download
-                    this.view.btnOptions.menu.items[1].setDisabled(true); // download docx
-                    this.view.btnOptions.menu.items[2].setDisabled(true); // download pdf
+                    this.view.btnOptions.menu.items[8].setDisabled(true); // print
+                    this.view.btnOptions.menu.items[5].setDisabled(true); // download
+                    this.view.btnOptions.menu.items[6].setDisabled(true); // download docx
+                    this.view.btnOptions.menu.items[7].setDisabled(true); // download pdf
                 }
+            }
+        },
+
+        onApiCanRevert: function(which, can) {
+            if (!this.view) return;
+
+            (which=='undo') ? this.view.btnUndo.setDisabled(!can) : this.view.btnRedo.setDisabled(!can);
+
+            if (this.view.btnOptions && this.view.btnOptions.menu) {
+                (which=='undo') ? this.view.btnOptions.menu.items[0].setDisabled(!can) : this.view.btnOptions.menu.items[1].setDisabled(!can);
             }
         },
 
@@ -1928,24 +2039,29 @@ define([
         errorInconsistentExtXlsx: 'An error has occurred while opening the file.<br>The file content corresponds to spreadsheets (e.g. xlsx), but the file has the inconsistent extension: %1.',
         errorInconsistentExtPptx: 'An error has occurred while opening the file.<br>The file content corresponds to presentations (e.g. pptx), but the file has the inconsistent extension: %1.',
         errorInconsistentExtPdf: 'An error has occurred while opening the file.<br>The file content corresponds to one of the following formats: pdf/djvu/xps/oxps, but the file has the inconsistent extension: %1.',
-        errorInconsistentExt: 'An error has occurred while opening the file.<br>The file content does not match the file extension.'
+        errorInconsistentExt: 'An error has occurred while opening the file.<br>The file content does not match the file extension.',
+        warnLicenseBefore: 'License not active.<br>Please contact your administrator.',
+        titleLicenseNotActive: 'License not active',
+        warnLicenseAnonymous: 'Access denied for anonymous users. This document will be opened for viewing only.'
 
     }, DE.Controllers.ApplicationController));
 
-    var Desktop = function () {
+/*    var Desktop = function () {
         var features = {
             version: '{{PRODUCT_VERSION}}',
             // eventloading: true,
             uitype: 'fillform',
             uithemes: true
         };
-        var api;
+        var api, nativevars;
 
         var native = window.desktop || window.AscDesktopEditor;
         !!native && native.execCommand('webapps:features', JSON.stringify(features));
 
         if ( !!native ) {
             $('#header-logo, .brand-logo').hide();
+
+            nativevars = window.RendererProcessVariable;
 
             window.on_native_message = function (cmd, param) {
                 if (/theme:changed/.test(cmd)) {
@@ -1993,6 +2109,9 @@ define([
             isActive: function () {
                 return !!native;
             },
+            isOffline: function () {
+                return api && api.asc_isOffline();
+            },
             process: function (opts) {
                 if ( !!native && !!api ) {
                     if ( opts == 'goback' ) {
@@ -2005,9 +2124,14 @@ define([
 
                 return false;
             },
+            systemThemeType: function () {
+                return nativevars.theme && !!nativevars.theme.system ? nativevars.theme.system :
+                    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            },
         }
     };
-    DE.Controllers.Desktop = new Desktop();
-    Common.Controllers = Common.Controllers || {};
-    Common.Controllers.Desktop = DE.Controllers.Desktop;
+ */
+    // DE.Controllers.Desktop = new Desktop();
+    // Common.Controllers = Common.Controllers || {};
+    // Common.Controllers.Desktop = DE.Controllers.Desktop;
 });

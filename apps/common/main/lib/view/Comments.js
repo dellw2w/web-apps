@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2019
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -29,7 +28,7 @@
  * Creative Commons Attribution-ShareAlike 4.0 International. See the License
  * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
  *
-*/
+ */
 /**
  *  Comments.js
  *
@@ -98,6 +97,17 @@ define([
                 var text = $(this.el).find('textarea');
                 return (text && text.length) ? text.val().trim() : '';
             },
+            disableTextBoxButton: function(textboxEl) {
+                var button = $(textboxEl.siblings('#id-comments-change')[0]);
+
+                if(textboxEl.val().trim().length > 0) {
+                    button.removeAttr('disabled');
+                    button.removeClass('disabled');
+                } else {
+                    button.attr('disabled', true);
+                    button.addClass('disabled');
+                }
+            },
             autoHeightTextBox: function () {
                 var view = this,
                     textBox = $(this.el).find('textarea'),
@@ -127,13 +137,19 @@ define([
                     view.autoScrollToEditButtons();
                 }
 
+                function onTextareaInput(event) {
+                    updateTextBoxHeight();
+                    view.disableTextBoxButton($(event.target));
+                }
+
                 if (textBox && textBox.length) {
                     domTextBox = textBox.get(0);
 
+                    view.disableTextBoxButton(textBox);
                     if (domTextBox) {
                         lineHeight = parseInt(textBox.css('lineHeight'), 10) * 0.25;
                         updateTextBoxHeight();
-                        textBox.bind('input propertychange', updateTextBoxHeight)
+                        textBox.bind('input propertychange', onTextareaInput)
                     }
                 }
 
@@ -171,7 +187,7 @@ define([
 
         addCommentHeight: 45,
         newCommentHeight: 110,
-        textBoxAutoSizeLocked: undefined, // disable autosize textbox
+        textBoxAutoSizeLocked: undefined, // disable autoHeightTextBoxsize textbox
         viewmode: false,
 
         _commentsViewOnItemClick: function (picker, item, record, e) {
@@ -411,6 +427,8 @@ define([
                 this.menuFilterGroups.menu.on('item:toggle', _.bind(this.onFilterGroupsClick, this));
 
                 this.txtComment = $('#comment-msg-new', this.el);
+                this.scrollerNewCommet = new Common.UI.Scroller({el: $('.new-comment-ct') });
+
                 this.txtComment.keydown(function (event) {
                     if ((event.ctrlKey || event.metaKey) && !event.altKey && event.keyCode == Common.UI.Keys.RETURN) {
                         me.onClickAddDocumentComment();
@@ -694,7 +712,17 @@ define([
                 this.layout.setResizeValue(0, container.height() - this.addCommentHeight);
             }
         },
+        disableTextBoxButton: function(textboxEl) {
+            var button = $(textboxEl.parent().siblings('.add')[0]);
 
+            if(textboxEl.val().trim().length > 0) {
+                button.removeAttr('disabled');
+                button.removeClass('disabled');
+            } else {
+                button.attr('disabled', true);
+                button.addClass('disabled');
+            }
+        },
         autoHeightTextBox: function () {
             var me = this, domTextBox = null, lineHeight = 0, minHeight = 44;
             var textBox = $('#comment-msg-new', this.el);
@@ -736,9 +764,15 @@ define([
                         Math.min(height - contentHeight - textBoxMinHeightIndent, height - me.newCommentHeight)));
             }
 
+            function onTextareaInput(event) {
+                updateTextBoxHeight();
+                me.disableTextBoxButton($(event.target));
+            }
+
+            me.disableTextBoxButton(textBox);
             lineHeight = parseInt(textBox.css('lineHeight'), 10) * 0.25;
             updateTextBoxHeight();
-            textBox.bind('input propertychange', updateTextBoxHeight);
+            textBox.bind('input propertychange', onTextareaInput);
 
             this.textBox = textBox;
         },

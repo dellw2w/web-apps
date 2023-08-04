@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2020
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -61,7 +60,8 @@ define([
             this._state = {
                 zoom_type: undefined,
                 zoom_percent: undefined,
-                unitsChanged: true
+                unitsChanged: true,
+                lock_viewProps: false
             };
             Common.NotificationCenter.on('uitheme:changed', this.onThemeChanged.bind(this));
             Common.NotificationCenter.on('document:ready', _.bind(this.onDocumentReady, this));
@@ -75,6 +75,8 @@ define([
                 this.api.asc_registerCallback('asc_onNotesShow', _.bind(this.onNotesShow, this));
                 this.api.asc_registerCallback('asc_onCoAuthoringDisconnect', _.bind(this.onCoAuthoringDisconnect, this));
                 Common.NotificationCenter.on('api:disconnect', _.bind(this.onCoAuthoringDisconnect, this));
+                this.api.asc_registerCallback('asc_onLockViewProps', _.bind(this.onLockViewProps, this, true));
+                this.api.asc_registerCallback('asc_onUnLockViewProps', _.bind(this.onLockViewProps, this, false));
             }
             return this;
         },
@@ -120,6 +122,7 @@ define([
                 'DocumentHolder': {
                     'guides:show': _.bind(this.onGuidesShow, this),
                     'guides:add': _.bind(this.onGuidesAdd, this),
+                    'guides:delete': _.bind(this.onGuidesDelete, this),
                     'guides:clear': _.bind(this.onGuidesClear, this),
                     'guides:smart': _.bind(this.onGuidesSmartShow, this),
                     'gridlines:show': _.bind(this.onGridlinesShow, this),
@@ -254,7 +257,10 @@ define([
 
         onGuidesAfterShow: function() {
             if (this.view) {
-                this.view.btnGuides.menu.items[6].setDisabled(!this.api.asc_canClearGuides());
+                this.view.btnGuides.menu.items[2].setDisabled(this._state.lock_viewProps); // add v guides
+                this.view.btnGuides.menu.items[3].setDisabled(this._state.lock_viewProps); // add h guides
+                this.view.btnGuides.menu.items[6].setDisabled(this._state.lock_viewProps || !this.api.asc_canClearGuides()); // clear guides
+
                 this.view.btnGuides.menu.items[0].setChecked(this.api.asc_getShowGuides(), true);
                 this.view.btnGuides.menu.items[5].setChecked(this.api.asc_getShowSmartGuides(), true);
             }
@@ -271,8 +277,17 @@ define([
             Common.NotificationCenter.trigger('edit:complete', this.view);
         },
 
+        onGuidesDelete: function(id) {
+            this.api.asc_deleteGuide(id);
+            this.api.asc_getShowGuides() && (this.api.asc_getGuidesCount()<1) && this.onGuidesShow(false);
+
+            Common.NotificationCenter.trigger('edit:complete', this.view);
+        },
+
         onGuidesClear: function() {
             this.api.asc_clearGuides();
+            this.api.asc_getShowGuides() && this.onGuidesShow(false);
+
             Common.NotificationCenter.trigger('edit:complete', this.view);
         },
 
@@ -350,7 +365,21 @@ define([
                         item.setChecked(true);
                     else
                         item.setChecked(false);
+                    item.setDisabled(this._state.lock_viewProps);
                 }
+                menu.items[1].setDisabled(this._state.lock_viewProps); // snap to grid
+                menu.items[items.length-1].setDisabled(this._state.lock_viewProps); // custom
+            }
+        },
+
+        onLockViewProps: function(lock) {
+            this._state.lock_viewProps = lock;
+            Common.Utils.InternalSettings.set("pe-lock-view-props", lock);
+            if (this.view) {
+                if (this.view.btnGridlines && (typeof this.view.btnGridlines.menu === 'object') && this.view.btnGridlines.menu.isVisible())
+                    this.onGridlinesAfterShow();
+                if (this.view.btnGuides && (typeof this.view.btnGuides.menu === 'object') && this.view.btnGuides.menu.isVisible())
+                    this.onGuidesAfterShow();
             }
         },
 

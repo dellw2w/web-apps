@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2019
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -29,7 +28,7 @@
  * Creative Commons Attribution-ShareAlike 4.0 International. See the License
  * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
  *
-*/
+ */
 /**
  *  SignSettingsDialog.js
  *
@@ -79,7 +78,7 @@ define([
                     '<div class="input-row">',
                         '<label>' + this.textInstructions + '</label>',
                     '</div>',
-                    '<textarea id="id-dlg-sign-settings-instructions" class="form-control" style="width: 100%;height: 35px;margin-bottom: 10px;resize: none;"></textarea>',
+                    '<div id="id-dlg-sign-settings-instructions"></div>',
                     '<div id="id-dlg-sign-settings-date"></div>',
                 '</div>',
                 '<div class="footer center">',
@@ -121,15 +120,12 @@ define([
                 disabled    : this.type=='view'
             });
 
-            me.textareaInstructions = this.$window.find('textarea');
-            me.textareaInstructions.val(this.textDefInstruction);
-            me.textareaInstructions.keydown(function (event) {
-                if (event.keyCode == Common.UI.Keys.RETURN) {
-                    event.stopPropagation();
-                }
+            me.textareaInstructions = new Common.UI.TextareaField({
+                el          : $window.find('#id-dlg-sign-settings-instructions'),
+                style       : 'width: 100%; height: 35px;margin-bottom: 10px;',
+                value       : this.textDefInstruction,
+                disabled    : this.type=='view'
             });
-            (this.type=='view') ? this.textareaInstructions.attr('disabled', 'disabled') : this.textareaInstructions.removeAttr('disabled');
-            this.textareaInstructions.toggleClass('disabled', this.type=='view');
 
             this.chDate = new Common.UI.CheckBox({
                 el: $('#id-dlg-sign-settings-date'),
@@ -160,7 +156,7 @@ define([
                 value = props.asc_getEmail();
                 me.inputEmail.setValue(value ? value : '');
                 value = props.asc_getInstructions();
-                me.textareaInstructions.val(value ? value : '');
+                me.textareaInstructions.setValue(value ? value : '');
                 me.chDate.setValue(props.asc_getShowDate());
 
                 me._currentGuid = props.asc_getGuid();
@@ -174,7 +170,7 @@ define([
             props.asc_setSigner1(me.inputName.getValue());
             props.asc_setSigner2(me.inputTitle.getValue());
             props.asc_setEmail(me.inputEmail.getValue());
-            props.asc_setInstructions(me.textareaInstructions.val());
+            props.asc_setInstructions(me.textareaInstructions.getValue());
             props.asc_setShowDate(me.chDate.getValue()=='checked');
             (me._currentGuid!==undefined) && props.asc_setGuid(me._currentGuid);
 

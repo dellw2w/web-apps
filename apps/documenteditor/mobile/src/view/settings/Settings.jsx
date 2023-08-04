@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {f7} from 'framework7-react';
 import { observer, inject } from "mobx-react";
 import {Device} from '../../../../../common/mobile/utils/device';
-
 import DocumentSettingsController from "../../controller/settings/DocumentSettings";
 import DocumentInfoController from "../../controller/settings/DocumentInfo";
 import { DownloadController } from "../../controller/settings/Download";
@@ -14,6 +13,10 @@ import { MacrosSettings, Direction } from "./ApplicationSettings";
 import About from '../../../../../common/mobile/lib/view/About';
 import NavigationController from '../../controller/settings/Navigation';
 import SharingSettings from "../../../../../common/mobile/lib/view/SharingSettings";
+import ProtectionDocumentController from '../../controller/settings/DocumentProtection';
+import ProtectionController from '../../controller/settings/Protection';
+import FileEncryptionController from '../../controller/settings/FileEncryption';
+import VersionHistoryController from '../../../../../common/mobile/lib/controller/VersionHistory';
 
 const routes = [
     {
@@ -65,33 +68,67 @@ const routes = [
     },
 
     // Direction 
-
     {
         path: '/direction/',
         component: Direction
     },
 
     // Sharing Settings
-
     {
         path: '/sharing-settings/',
         component: SharingSettings
-    }
+    },
+
+    // Protection
+    {
+        path: '/protection',
+        component: ProtectionController
+    },
+    {
+        path: '/protect',
+        component: ProtectionDocumentController
+    },
+
+    // Encryption
+    {
+        path: '/encrypt',
+        component: FileEncryptionController
+    },
+    
+    // Version History 
+    {
+        path: '/version-history',
+        component: VersionHistoryController,
+        options: {
+            props: {
+                isNavigate: true
+            }
+        }
+    },
 ];
 
 
-const SettingsList = inject("storeAppOptions", "storeReview")(observer(props => {
+const SettingsList = inject("storeAppOptions", "storeReview", "storeDocumentInfo", "storeVersionHistory")(observer(props => {
     const { t } = useTranslation();
     const _t = t('Settings', {returnObjects: true});
     const appOptions = props.storeAppOptions;
+    const storeVersionHistory = props.storeVersionHistory;
+    const isVersionHistoryMode = storeVersionHistory.isVersionHistoryMode;
+    const canProtect = appOptions.canProtect;
     const storeReview = props.storeReview;
     const displayMode = storeReview.displayMode;
-    const navbar = <Navbar title={_t.textSettings}>
-                    {!props.inPopover  && <NavRight><Link popupClose=".settings-popup">{_t.textDone}</Link></NavRight>}
-                    </Navbar>;
+    const docInfo = props.storeDocumentInfo;
+    const docTitle = docInfo.dataDoc.title;
+    const docExt = docInfo.dataDoc ? docInfo.dataDoc.fileType : '';
+    const isNotForm = docExt && docExt !== 'oform';
+    const navbar = 
+        <Navbar>
+            <div className="title" onClick={props.changeTitleHandler}>{docTitle}</div>
+            {!props.inPopover  && <NavRight><Link popupClose=".settings-popup">{_t.textDone}</Link></NavRight>}
+        </Navbar>;
 
     const onoptionclick = page => {
-        if ( props.onOptionClick )
+        if(props.onOptionClick) 
             props.onOptionClick(page)
     };
 
@@ -103,14 +140,9 @@ const SettingsList = inject("storeAppOptions", "storeReview")(observer(props => 
         }
     };
 
-    const onOpenCollaboration = () => {
+    const onOpenOptions = keyword => {
         closeModal();
-        props.openOptions('coauth');
-    }
-
-    const onOpenNavigation = () => {
-        closeModal();
-        props.openOptions('navigation');
+        props.openOptions(keyword);
     }
 
     // set mode
@@ -122,7 +154,9 @@ const SettingsList = inject("storeAppOptions", "storeReview")(observer(props => 
         _canDownloadOrigin = false,
         _canAbout = true,
         _canHelp = true,
-        _canPrint = false;
+        _canPrint = false,
+        _canFeedback = true;
+
     if (appOptions.isDisconnected) {
         _isEdit = false;
         if (!appOptions.enableDownload)
@@ -132,11 +166,14 @@ const SettingsList = inject("storeAppOptions", "storeReview")(observer(props => 
         _canDownload = appOptions.canDownload;
         _canDownloadOrigin = appOptions.canDownloadOrigin;
         _canPrint = appOptions.canPrint;
+
         if (appOptions.customization && appOptions.canBrandingExt) {
-            _canAbout = (appOptions.customization.about!==false);
+            _canAbout = appOptions.customization.about !== false;
         }
+
         if (appOptions.customization) {
-            _canHelp = (appOptions.customization.help!==false);
+            _canHelp = appOptions.customization.help !== false;
+            _canFeedback = appOptions.customization.feedback !== false;
         }
     }
 
@@ -146,20 +183,38 @@ const SettingsList = inject("storeAppOptions", "storeReview")(observer(props => 
                 {navbar}
                 <List>
                     {!props.inPopover &&
-                        <ListItem title={!_isEdit || isViewer ? _t.textFind : _t.textFindAndReplace} link='#' searchbarEnable='.searchbar' onClick={closeModal} className='no-indicator'>
+                        <ListItem title={!_isEdit || isViewer || isVersionHistoryMode ? _t.textFind : _t.textFindAndReplace} link='#' searchbarEnable='.searchbar' onClick={closeModal} className='no-indicator'>
                             <Icon slot="media" icon="icon-search"></Icon>
                         </ListItem>
                     }
-                    <ListItem title={t('Settings.textNavigation')} link='#' onClick={() => {
-                        if(Device.phone) {
-                            onOpenNavigation();
-                        } else {
-                            onoptionclick.bind(this, "/navigation/")();
-                        }}}>
-                        <Icon slot="media" icon="icon-navigation"></Icon>
-                    </ListItem>
-                    {window.matchMedia("(max-width: 359px)").matches ?
-                        <ListItem title={_t.textCollaboration} link="#" onClick={onOpenCollaboration} className='no-indicator'>
+                    {(_isEdit && canProtect && !isVersionHistoryMode) &&
+                        <ListItem title={t('Settings.textProtection')} link="#" onClick={onoptionclick.bind(this, '/protection')}>
+                            <Icon slot="media" icon="icon-protection"></Icon>
+                        </ListItem>
+                    }
+                    {_isEdit && 
+                        <ListItem title={t('Settings.textVersionHistory')} link="#" onClick={() => {
+                            if(Device.phone) {
+                                onOpenOptions('history');
+                            } else {
+                                onoptionclick.bind(this, "/version-history")();
+                            }
+                        }}>
+                            <Icon slot="media" icon="icon-version-history"></Icon>
+                        </ListItem>
+                    }
+                    {!isVersionHistoryMode ?
+                        <ListItem title={t('Settings.textNavigation')} link='#' onClick={() => {
+                            if(Device.phone) {
+                                onOpenOptions('navigation');
+                            } else {
+                                onoptionclick.bind(this, "/navigation/")();
+                            }}}>
+                            <Icon slot="media" icon="icon-navigation"></Icon>
+                        </ListItem> 
+                    : null}
+                    {window.matchMedia("(max-width: 359px)").matches && !isVersionHistoryMode ?
+                        <ListItem title={_t.textCollaboration} link="#" onClick={() => onOpenOptions('coauth')} className='no-indicator'>
                             <Icon slot="media" icon="icon-collaboration"></Icon>
                         </ListItem> 
                     : null}
@@ -168,16 +223,13 @@ const SettingsList = inject("storeAppOptions", "storeReview")(observer(props => 
                             <Icon slot="media" icon="icon-spellcheck"></Icon>
                         </ListItem>
                     }
-                    {!isViewer && Device.phone &&
+                    {(!isViewer && Device.phone && !isVersionHistoryMode) &&
                         <ListItem title={t('Settings.textMobileView')}>
                             <Icon slot="media" icon="icon-mobile-view"></Icon>
-                            <Toggle checked={isMobileView} onToggleChange={async () => {
-                                await props.onChangeMobileView();
-                                await closeModal();
-                                await props.openOptions('snackbar');
-                                setTimeout(() => {
-                                    props.closeOptions('snackbar');
-                                },  1500);
+                            <Toggle checked={isMobileView} onToggleChange={() => {
+                                closeModal();
+                                props.onChangeMobileView();
+                                props.openOptions('snackbar');
                             }} />
                         </ListItem>
                     }
@@ -187,13 +239,12 @@ const SettingsList = inject("storeAppOptions", "storeReview")(observer(props => 
                             <Icon slot="media" icon="icon-doc-setup"></Icon>
                         </ListItem>
                     }
-                    <ListItem title={_t.textApplicationSettings} link="#"
-                              onClick={onoptionclick.bind(this, "/application-settings/")}>
-                        <Icon slot="media" icon="icon-app-settings"></Icon>
-                    </ListItem>
-                    <ListItem title={t('Common.Collaboration.textSharingSettings')} link="#" onClick={onoptionclick.bind(this, "/sharing-settings/")}>
-                        <Icon slot="media" icon="icon-sharing-settings"></Icon>
-                    </ListItem>
+                    {isNotForm &&
+                        <ListItem title={_t.textApplicationSettings} link="#"
+                                onClick={onoptionclick.bind(this, "/application-settings/")}>
+                            <Icon slot="media" icon="icon-app-settings"></Icon>
+                        </ListItem>
+                    }
                     {_canDownload &&
                         <ListItem title={_t.textDownload} link="#" onClick={onoptionclick.bind(this, "/download/")}>
                             <Icon slot="media" icon="icon-download"></Icon>
@@ -217,14 +268,16 @@ const SettingsList = inject("storeAppOptions", "storeReview")(observer(props => 
                             <Icon slot="media" icon="icon-help"></Icon>
                         </ListItem>
                     }
-                    {_canAbout &&
+                    {(_canAbout && isNotForm) &&
                         <ListItem title={_t.textAbout} link="#" onClick={onoptionclick.bind(this, "/about/")}>
                             <Icon slot="media" icon="icon-about"></Icon>
                         </ListItem>
                     }
-                    <ListItem title={t('Settings.textFeedback')} link="#" className='no-indicator' onClick={props.showFeedback}>
-                            <Icon slot="media" icon="icon-feedback"></Icon>
-                    </ListItem>
+                    {_canFeedback &&
+                        <ListItem title={t('Settings.textFeedback')} link="#" className='no-indicator' onClick={props.showFeedback}>
+                                <Icon slot="media" icon="icon-feedback"></Icon>
+                        </ListItem>
+                    }
                 </List>
             </Page>
         </View>
@@ -244,13 +297,14 @@ class SettingsView extends Component {
 
     render() {
         const show_popover = this.props.usePopover;
+
         return (
             show_popover ?
                 <Popover id="settings-popover" closeByOutsideClick={false} className="popover__titled" onPopoverClosed={() => this.props.closeOptions('settings')}>
-                    <SettingsList inPopover={true} onOptionClick={this.onoptionclick} closeOptions={this.props.closeOptions} openOptions={this.props.openOptions} style={{height: '410px'}} onChangeMobileView={this.props.onChangeMobileView} onPrint={this.props.onPrint} showHelp={this.props.showHelp} showFeedback={this.props.showFeedback} onOrthographyCheck={this.props.onOrthographyCheck} onDownloadOrigin={this.props.onDownloadOrigin}/>
+                    <SettingsList inPopover={true} onOptionClick={this.onoptionclick} closeOptions={this.props.closeOptions} openOptions={this.props.openOptions} style={{height: '410px'}} onChangeMobileView={this.props.onChangeMobileView} onPrint={this.props.onPrint} showHelp={this.props.showHelp} showFeedback={this.props.showFeedback} onOrthographyCheck={this.props.onOrthographyCheck} onDownloadOrigin={this.props.onDownloadOrigin} changeTitleHandler={this.props.changeTitleHandler} />
                 </Popover> :
                 <Popup className="settings-popup" onPopupClosed={() => this.props.closeOptions('settings')}>
-                    <SettingsList onOptionClick={this.onoptionclick} closeOptions={this.props.closeOptions} openOptions={this.props.openOptions} onChangeMobileView={this.props.onChangeMobileView} onPrint={this.props.onPrint} showHelp={this.props.showHelp} showFeedback={this.props.showFeedback} onOrthographyCheck={this.props.onOrthographyCheck} onDownloadOrigin={this.props.onDownloadOrigin}/>
+                    <SettingsList onOptionClick={this.onoptionclick} closeOptions={this.props.closeOptions} openOptions={this.props.openOptions} onChangeMobileView={this.props.onChangeMobileView} onPrint={this.props.onPrint} showHelp={this.props.showHelp} showFeedback={this.props.showFeedback} onOrthographyCheck={this.props.onOrthographyCheck} onDownloadOrigin={this.props.onDownloadOrigin} changeTitleHandler={this.props.changeTitleHandler} />
                 </Popup>
         )
     }

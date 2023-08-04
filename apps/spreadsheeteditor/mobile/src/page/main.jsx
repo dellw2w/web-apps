@@ -4,7 +4,7 @@ import { observer, inject } from "mobx-react";
 import { Device } from '../../../../common/mobile/utils/device';
 
 import Settings from '../view/settings/Settings';
-import CollaborationView from '../../../../common/mobile/lib/view/collaboration/Collaboration.jsx'
+import { Collaboration } from '../../../../common/mobile/lib/view/collaboration/Collaboration.jsx'
 import CellEditor from '../controller/CellEditor';
 import { Statusbar } from '../controller/Statusbar';
 import FilterOptionsController from '../controller/FilterOptions.jsx'
@@ -18,6 +18,7 @@ import ContextMenu from '../controller/ContextMenu';
 import { Toolbar } from "../controller/Toolbar";
 import { AddLinkController } from '../controller/add/AddLink';
 import { EditLinkController } from '../controller/edit/EditLink';
+import VersionHistoryController from '../../../../common/mobile/lib/controller/VersionHistory';
 
 class MainPage extends Component {
     constructor(props) {
@@ -58,6 +59,8 @@ class MainPage extends Component {
             } else if( opts === 'edit-link') {
                 this.state.editLinkSettingsVisible && (opened = true);
                 newState.editLinkSettingsVisible = true;
+            } else if (opts === 'history') {
+                newState.historyVisible = true;
             }
 
             for (let key in this.state) {
@@ -93,6 +96,8 @@ class MainPage extends Component {
                     return {addLinkSettingsVisible: false};
                 else if( opts === 'edit-link') 
                     return {editLinkSettingsVisible: false};
+                else if (opts === 'history')
+                    return {historyVisible: false}
             });
             if ((opts === 'edit' || opts === 'coauth') && Device.phone) {
                 f7.navbar.show('.main-navbar');
@@ -100,40 +105,52 @@ class MainPage extends Component {
         }, 1);
     };
 
-  render() {
-      const appOptions = this.props.storeAppOptions;
-      const storeWorksheets = this.props.storeWorksheets;
-      const wsProps = storeWorksheets.wsProps;
-      const wsLock = storeWorksheets.wsLock;
-      const config = appOptions.config;
+    render() {
+        const appOptions = this.props.storeAppOptions;
+        const storeWorksheets = this.props.storeWorksheets;
+        const wsProps = storeWorksheets.wsProps;
+        const wsLock = storeWorksheets.wsLock;
+        const config = appOptions.config;
+        const isShowPlaceholder = !appOptions.isDocReady && (!config.customization || !(config.customization.loaderName || config.customization.loaderLogo));
 
-      let showLogo = !(appOptions.canBrandingExt && (config.customization && (config.customization.loaderName || config.customization.loaderLogo)));
-      if ( !Object.keys(config).length ) {
-          showLogo = !/&(?:logo)=/.test(window.location.search);
-      }
+        let isHideLogo = true,
+            isCustomization = true,
+            isBranding = true;
 
-      const showPlaceholder = !appOptions.isDocReady && (!config.customization || !(config.customization.loaderName || config.customization.loaderLogo));
-      if ( $$('.skl-container').length ) {
-          $$('.skl-container').remove();
-      }
+        if (!appOptions.isDisconnected && config?.customization) {
+            isCustomization = !!(config.customization && (config.customization.loaderName || config.customization.loaderLogo));
+            isBranding = appOptions.canBranding || appOptions.canBrandingExt;
 
-      return (
-            <Page name="home" className={`editor${ showLogo ? ' page-with-logo' : ''}`}>
-              {/* Top Navbar */}
-                <Navbar id='editor-navbar' className={`main-navbar${showLogo ? ' navbar-with-logo' : ''}`}>
-                    {showLogo && appOptions.canBranding !== undefined && <div className="main-logo" onClick={
-                    () => {
+            if (!Object.keys(config).length) {
+                isCustomization = !/&(?:logo)=/.test(window.location.search);
+            }
+
+            isHideLogo = isCustomization && isBranding; 
+        }
+
+        if ($$('.skl-container').length) {
+            $$('.skl-container').remove();
+        }
+
+        return (
+            <Page name="home" className={`editor${!isHideLogo ? ' page-with-logo' : ''}`}>
+                {/* Top Navbar */}
+                <Navbar id='editor-navbar'
+                        className={`main-navbar${!isHideLogo ? ' navbar-with-logo' : ''}`}>
+                    {!isHideLogo && <div className="main-logo" onClick={() => {
                         window.open(`${__PUBLISHER_URL__}`, "_blank");
                     }}><Icon icon="icon-logo"></Icon></div>}
                     <Subnavbar>
-                        <Toolbar openOptions={this.handleClickToOpenOptions} closeOptions={this.handleOptionsViewClosed}/>
+                        <Toolbar openOptions={this.handleClickToOpenOptions}
+                                closeOptions={this.handleOptionsViewClosed}/>
                         <Search useSuspense={false}/>
                     </Subnavbar>
                 </Navbar>
+             
                 <CellEditor onClickToOpenAddOptions={(panels, button) => this.handleClickToOpenOptions('add', {panels: panels, button: button})}/>
                 {/* Page content */}
                 <View id="editor_sdk" />
-                {showPlaceholder ?
+                {isShowPlaceholder ?
                     <div className="doc-placeholder">
                         <div className="columns"></div>
                         <div className="columns"></div>
@@ -162,8 +179,12 @@ class MainPage extends Component {
                         <Settings openOptions={this.handleClickToOpenOptions} onclosed={this.handleOptionsViewClosed.bind(this, 'settings')} />
                 }
                 {
+                    !this.state.historyVisible ? null :
+                        <VersionHistoryController onclosed={this.handleOptionsViewClosed.bind(this, 'history')} />
+                }
+                {
                     !this.state.collaborationVisible ? null :
-                        <CollaborationView onclosed={this.handleOptionsViewClosed.bind(this, 'coauth')} />
+                        <Collaboration onclosed={this.handleOptionsViewClosed.bind(this, 'coauth')} />
                 }
 
                 {appOptions.isDocReady &&
@@ -177,8 +198,8 @@ class MainPage extends Component {
 
                 <FunctionGroups /> {/* hidden component*/}
             </Page>
-      )
-  }
+        )
+    }
 }
 
 export default inject("storeAppOptions", "storeWorksheets")(observer(MainPage));

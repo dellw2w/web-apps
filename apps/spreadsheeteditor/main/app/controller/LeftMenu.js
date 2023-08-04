@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2019
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -29,7 +28,7 @@
  * Creative Commons Attribution-ShareAlike 4.0 International. See the License
  * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
  *
-*/
+ */
 define([
     'core',
     'common/main/lib/util/Shortcuts',
@@ -111,21 +110,19 @@ define([
             this.leftMenu = this.createView('LeftMenu').render();
             this.leftMenu.btnSearchBar.on('toggle', _.bind(this.onMenuSearchBar, this));
 
-            Common.util.Shortcuts.delegateShortcuts({
-                shortcuts: {
-                    'command+shift+s,ctrl+shift+s': _.bind(this.onShortcut, this, 'save'),
-                    'command+f,ctrl+f': _.bind(this.onShortcut, this, 'search'),
-                    'ctrl+h': _.bind(this.onShortcut, this, 'replace'),
-                    'alt+f': _.bind(this.onShortcut, this, 'file'),
-                    'esc': _.bind(this.onShortcut, this, 'escape'),
-                    /** coauthoring begin **/
-                    'alt+q': _.bind(this.onShortcut, this, 'chat'),
-                    'command+shift+h,ctrl+shift+h': _.bind(this.onShortcut, this, 'comments'),
-                    /** coauthoring end **/
-                    'f1': _.bind(this.onShortcut, this, 'help')
-                }
-            });
-
+            var keymap = {
+                'command+shift+s,ctrl+shift+s': _.bind(this.onShortcut, this, 'save'),
+                'command+f,ctrl+f': _.bind(this.onShortcut, this, 'search'),
+                'ctrl+h': _.bind(this.onShortcut, this, 'replace'),
+                'esc': _.bind(this.onShortcut, this, 'escape'),
+                /** coauthoring begin **/
+                'command+shift+h,ctrl+shift+h': _.bind(this.onShortcut, this, 'comments'),
+                /** coauthoring end **/
+                'f1': _.bind(this.onShortcut, this, 'help')
+            };
+            keymap[Common.Utils.isMac ? 'ctrl+alt+f' : 'alt+f'] = _.bind(this.onShortcut, this, 'file');
+            keymap[Common.Utils.isMac ? 'ctrl+alt+q' : 'alt+q'] = _.bind(this.onShortcut, this, 'chat');
+            Common.util.Shortcuts.delegateShortcuts({shortcuts:keymap});
             Common.util.Shortcuts.suspendEvents();
 
             var me = this;
@@ -192,7 +189,8 @@ define([
                 Common.util.Shortcuts.removeShortcuts({
                     shortcuts: {
                         'command+shift+s,ctrl+shift+s': _.bind(this.onShortcut, this, 'save'),
-                        'alt+f': _.bind(this.onShortcut, this, 'file')
+                        'alt+f': _.bind(this.onShortcut, this, 'file'),
+                        'ctrl+alt+f': _.bind(this.onShortcut, this, 'file')
                     }
                 });
 
@@ -268,6 +266,9 @@ define([
             case 'back': break;
             case 'save': this.api.asc_Save(); break;
             case 'save-desktop': this.api.asc_DownloadAs(); break;
+            case 'export-pdf':
+                Common.NotificationCenter.trigger('export:to', this.leftMenu, Asc.c_oAscFileType.PDF);
+                break;
             case 'print': Common.NotificationCenter.trigger('print', this.leftMenu); break;
             case 'exit': Common.NotificationCenter.trigger('goback'); break;
             case 'edit':
@@ -326,19 +327,41 @@ define([
             }
         },
 
+        showLostDataWarning: function(callback) {
+            Common.UI.warning({
+                title: this.textWarning,
+                msg: this.warnDownloadAs,
+                buttons: ['ok', 'cancel'],
+                callback: _.bind(function (btn) {
+                    if (btn == 'ok') {
+                        callback.call();
+                    }
+                }, this)
+            });
+        },
+
         clickSaveAsFormat: function(menu, format) {
             if (format == Asc.c_oAscFileType.CSV) {
-                Common.UI.warning({
-                    title: this.textWarning,
-                    msg: this.warnDownloadAs,
-                    buttons: ['ok', 'cancel'],
-                    callback: _.bind(function(btn){
-                        if (btn == 'ok') {
-                            Common.NotificationCenter.trigger('download:advanced', Asc.c_oAscAdvancedOptionsID.CSV, this.api.asc_getAdvancedOptions(), 2, new Asc.asc_CDownloadOptions(format));
-                            menu.hide();
-                        }
-                    }, this)
-                });
+                var me = this;
+                if (this.api.asc_getWorksheetsCount()>1) {
+                    Common.UI.warning({
+                        title: this.textWarning,
+                        msg: this.warnDownloadCsvSheets,
+                        buttons: [{value: 'ok', caption: this.textSave}, 'cancel'],
+                        callback: _.bind(function (btn) {
+                            if (btn == 'ok') {
+                                me.showLostDataWarning(function () {
+                                    Common.NotificationCenter.trigger('download:advanced', Asc.c_oAscAdvancedOptionsID.CSV, me.api.asc_getAdvancedOptions(), 2, new Asc.asc_CDownloadOptions(format));
+                                    menu.hide();
+                                });
+                            }
+                        }, this)
+                    });
+                } else
+                    this.showLostDataWarning(function () {
+                        Common.NotificationCenter.trigger('download:advanced', Asc.c_oAscAdvancedOptionsID.CSV, me.api.asc_getAdvancedOptions(), 2, new Asc.asc_CDownloadOptions(format));
+                        menu.hide();
+                    });
             } else if (format == Asc.c_oAscFileType.PDF || format == Asc.c_oAscFileType.PDFA) {
                 menu.hide();
                 Common.NotificationCenter.trigger('download:settings', this.leftMenu, format);
@@ -350,18 +373,28 @@ define([
 
         clickSaveCopyAsFormat: function(menu, format, ext) {
             if (format == Asc.c_oAscFileType.CSV) {
-                Common.UI.warning({
-                    title: this.textWarning,
-                    msg: this.warnDownloadAs,
-                    buttons: ['ok', 'cancel'],
-                    callback: _.bind(function(btn){
-                        if (btn == 'ok') {
-                            this.isFromFileDownloadAs = ext;
-                            Common.NotificationCenter.trigger('download:advanced', Asc.c_oAscAdvancedOptionsID.CSV, this.api.asc_getAdvancedOptions(), 2, new Asc.asc_CDownloadOptions(format, true));
-                            menu.hide();
-                        }
-                    }, this)
-                });
+                var me = this;
+                if (this.api.asc_getWorksheetsCount()>1) {
+                    Common.UI.warning({
+                        title: this.textWarning,
+                        msg: this.warnDownloadCsvSheets,
+                        buttons: [{value: 'ok', caption: this.textSave}, 'cancel'],
+                        callback: _.bind(function (btn) {
+                            if (btn == 'ok') {
+                                me.showLostDataWarning(function () {
+                                    me.isFromFileDownloadAs = ext;
+                                    Common.NotificationCenter.trigger('download:advanced', Asc.c_oAscAdvancedOptionsID.CSV, me.api.asc_getAdvancedOptions(), 2, new Asc.asc_CDownloadOptions(format, true));
+                                    menu.hide();
+                                });
+                            }
+                        }, this)
+                    });
+                } else
+                    me.showLostDataWarning(function () {
+                        me.isFromFileDownloadAs = ext;
+                        Common.NotificationCenter.trigger('download:advanced', Asc.c_oAscAdvancedOptionsID.CSV, me.api.asc_getAdvancedOptions(), 2, new Asc.asc_CDownloadOptions(format, true));
+                        menu.hide();
+                    });
             } else if (format == Asc.c_oAscFileType.PDF || format == Asc.c_oAscFileType.PDFA) {
                 this.isFromFileDownloadAs = ext;
                 menu.hide();
@@ -857,6 +890,7 @@ define([
         onShowHideSearch: function (state, findText) {
             if (state) {
                 Common.UI.Menu.Manager.hideAll();
+                this.tryToShowLeftMenu();
                 this.leftMenu.showMenu('advancedsearch');
                 this.leftMenu.fireEvent('search:aftershow', [findText]);
             } else {
@@ -944,6 +978,8 @@ define([
         textLookin: 'Look in',
         txtUntitled: 'Untitled',
         textLoadHistory         : 'Loading version history...',
-        leavePageText: 'All unsaved changes in this document will be lost.<br> Click \'Cancel\' then \'Save\' to save them. Click \'OK\' to discard all the unsaved changes.'
+        leavePageText: 'All unsaved changes in this document will be lost.<br> Click \'Cancel\' then \'Save\' to save them. Click \'OK\' to discard all the unsaved changes.',
+        warnDownloadCsvSheets: 'The CSV format does not support saving a multi-sheet file.<br>To keep the selected format and save only the current sheet, press Save.<br>To save the current spreadsheet, click Cancel and save it in a different format.',
+        textSave: 'Save'
     }, SSE.Controllers.LeftMenu || {}));
 });

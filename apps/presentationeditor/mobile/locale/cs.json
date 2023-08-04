@@ -112,7 +112,6 @@
       "textHasMacros": "Soubor obsahuje automatická makra.<br>Opravdu chcete makra spustit?",
       "textNo": "Ne",
       "textNoLicenseTitle": "Došlo k dosažení limitu licence",
-      "textNoTextFound": "Text nebyl nalezen",
       "textOpenFile": "Zadejte heslo pro otevření souboru",
       "textPaidFeature": "Placená funkce",
       "textRemember": "Zapamatovat moji volbu",
@@ -132,7 +131,11 @@
       "warnLicenseUsersExceeded": "Došlo dosažení limitu %1 editorů v režimu spolupráce na úpravách. Ohledně podrobností se obraťte na svého správce.",
       "warnNoLicense": "Došlo k dosažení limitu souběžného připojení %1 editorů. Tento dokument bude otevřen pouze pro náhled. Pro rozšíření funkcí kontaktujte %1 obchodní oddělení.",
       "warnNoLicenseUsers": "Došlo k dosažení limitu %1 editorů. Pro rozšíření funkcí kontaktujte %1 obchodní oddělení.",
-      "warnProcessRightsChange": "Nemáte oprávnění pro úpravu tohoto dokumentu."
+      "warnProcessRightsChange": "Nemáte oprávnění pro úpravu tohoto dokumentu.",
+      "textNoMatches": "No Matches",
+      "titleLicenseNotActive": "License not active",
+      "warnLicenseAnonymous": "Access denied for anonymous users.<br>This document will be opened for viewing only.",
+      "warnLicenseBefore": "License not active.<br>Please contact your administrator."
     }
   },
   "Error": {
@@ -173,11 +176,13 @@
     "uploadImageFileCountMessage": "Žádné obrázky nenahrány.",
     "uploadImageSizeMessage": "Obrázek je příliš velký. Maximální velikost je 25 MB.",
     "errorDirectUrl": "Please verify the link to the document.<br>This link must be a direct link to the file for downloading.",
+    "errorInconsistentExt": "An error has occurred while opening the file.<br>The file content does not match the file extension.",
     "errorInconsistentExtDocx": "An error has occurred while opening the file.<br>The file content corresponds to text documents (e.g. docx), but the file has the inconsistent extension: %1.",
-    "errorInconsistentExtXlsx": "An error has occurred while opening the file.<br>The file content corresponds to spreadsheets (e.g. xlsx), but the file has the inconsistent extension: %1.",
-    "errorInconsistentExtPptx": "An error has occurred while opening the file.<br>The file content corresponds to presentations (e.g. pptx), but the file has the inconsistent extension: %1.",
     "errorInconsistentExtPdf": "An error has occurred while opening the file.<br>The file content corresponds to one of the following formats: pdf/djvu/xps/oxps, but the file has the inconsistent extension: %1.",
-    "errorInconsistentExt": "An error has occurred while opening the file.<br>The file content does not match the file extension."
+    "errorInconsistentExtPptx": "An error has occurred while opening the file.<br>The file content corresponds to presentations (e.g. pptx), but the file has the inconsistent extension: %1.",
+    "errorInconsistentExtXlsx": "An error has occurred while opening the file.<br>The file content corresponds to spreadsheets (e.g. xlsx), but the file has the inconsistent extension: %1.",
+    "errorToken": "The document security token is not correctly formed.<br>Please contact your Document Server administrator.",
+    "errorTokenExpire": "The document security token has expired.<br>Please contact your Document Server administrator."
   },
   "LongActions": {
     "applyChangesTextText": "Načítání dat...",
@@ -258,6 +263,7 @@
       "textTableSize": "Velikost tabulky",
       "txtNotUrl": "Toto pole by mělo obsahovat adresu URL ve formátu \"http://www.example.com\"",
       "textDone": "Done",
+      "textPasteImageUrl": "Paste an image URL",
       "textRecommended": "Recommended",
       "textRequired": "Required"
     },
@@ -294,6 +300,7 @@
       "textBulletsAndNumbers": "Odrážky & Číslování",
       "textCaseSensitive": "Rozlišovat malá a velká písmena",
       "textCellMargins": "Okraje buňky",
+      "textChangeShape": "Změnit obrazec",
       "textChart": "Graf",
       "textClock": "Hodiny",
       "textClockwise": "Po směru hodinových ručiček",
@@ -353,7 +360,6 @@
       "textNextSlide": "Další snímek",
       "textNone": "Žádné",
       "textNoStyles": "Žádné styly pro tento typ grafu.",
-      "textNoTextFound": "Text nebyl nalezen",
       "textNotUrl": "Toto pole by mělo obsahovat adresu URL ve formátu \"http://www.example.com\"",
       "textNumbers": "Čísla",
       "textOk": "OK",
@@ -410,12 +416,16 @@
       "textZoomRotate": "Přiblížit a otočit",
       "textArrange": "Arrange",
       "textCancel": "Cancel",
-      "textChangeShape": "Change Shape",
       "textDeleteImage": "Delete Image",
       "textDeleteLink": "Delete Link",
       "textInsertImage": "Insert Image",
+      "textNoMatches": "No Matches",
       "textRecommended": "Recommended",
-      "textRequired": "Required"
+      "textRequired": "Required",
+      "textMorph": "Morph",
+      "textMorphObjects": "Objects",
+      "textMorphWords": "Words",
+      "textMorphLetters": "Letters"
     },
     "Settings": {
       "mniSlideStandard": "Standardní (4:3)",
@@ -455,7 +465,6 @@
       "textLoading": "Načítání...",
       "textLocation": "Umístění",
       "textMacrosSettings": "Nastavení maker",
-      "textNoTextFound": "Text nebyl nalezen",
       "textOk": "OK",
       "textOwner": "Vlastník",
       "textPoint": "Bod",
@@ -500,7 +509,8 @@
       "txtScheme6": "Hala",
       "txtScheme7": "Rovnost",
       "txtScheme8": "Tok",
-      "txtScheme9": "Slévárna"
+      "txtScheme9": "Slévárna",
+      "textNoMatches": "No Matches"
     }
   }
 }

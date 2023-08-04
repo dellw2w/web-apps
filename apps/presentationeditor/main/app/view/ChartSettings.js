@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2019
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -29,7 +28,7 @@
  * Creative Commons Attribution-ShareAlike 4.0 International. See the License
  * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
  *
-*/
+ */
 /**
  *  ChartSettings.js
  *
@@ -264,10 +263,10 @@ define([
                 me.mnuChartTypePicker = new Common.UI.DataView({
                     el: $('#id-chart-menu-type'),
                     parentMenu: btn.menu,
-                    restoreHeight: 465,
+                    restoreHeight: 535,
                     groups: new Common.UI.DataViewGroupStore(Common.define.chartData.getChartGroupData()),
                     store: new Common.UI.DataViewStore(Common.define.chartData.getChartData()),
-                    itemTemplate: _.template('<div id="<%= id %>" class="item-chartlist"><svg width="40" height="40" class=\"icon\"><use xlink:href=\"#chart-<%= iconCls %>\"></use></svg></div>'),
+                    itemTemplate: _.template('<div id="<%= id %>" class="item-chartlist"><svg width="40" height="40" class=\"icon uni-scale\"><use xlink:href=\"#chart-<%= iconCls %>\"></use></svg></div>'),
                     delayRenderTips: true,
                     delaySelect: Common.Utils.isSafari
                 });
@@ -320,7 +319,7 @@ define([
             this.btnRatio = new Common.UI.Button({
                 parentEl: $('#chart-button-ratio'),
                 cls: 'btn-toolbar',
-                iconCls: 'toolbar__icon advanced-btn-ratio',
+                iconCls: 'toolbar__icon btn-advanced-ratio',
                 style: 'margin-bottom: 1px;',
                 enableToggle: true,
                 hint: this.textKeepRatio
@@ -366,7 +365,7 @@ define([
             });
             this.lockedControls.push(this.btnLeft);
             this.btnLeft.on('click', _.bind(function() {
-                this.spnX.setValue(this.spnX.getNumberValue() - 10);
+                this.spnX.setValue(Math.ceil((this.spnX.getNumberValue() - 10)/10)*10);
             }, this));
 
             this.btnRight= new Common.UI.Button({
@@ -379,7 +378,7 @@ define([
             });
             this.lockedControls.push(this.btnRight);
             this.btnRight.on('click', _.bind(function() {
-                this.spnX.setValue(this.spnX.getNumberValue() + 10);
+                this.spnX.setValue(Math.floor((this.spnX.getNumberValue() + 10)/10)*10);
             }, this));
 
             this.spnY = new Common.UI.MetricSpinner({
@@ -408,7 +407,7 @@ define([
             });
             this.lockedControls.push(this.btnUp);
             this.btnUp.on('click', _.bind(function() {
-                this.spnY.setValue(this.spnY.getNumberValue() - 10);
+                this.spnY.setValue(Math.ceil((this.spnY.getNumberValue() - 10)/10)*10);
             }, this));
 
             this.btnDown= new Common.UI.Button({
@@ -421,7 +420,7 @@ define([
             });
             this.lockedControls.push(this.btnDown);
             this.btnDown.on('click', _.bind(function() {
-                this.spnY.setValue(this.spnY.getNumberValue() + 10);
+                this.spnY.setValue(Math.floor((this.spnY.getNumberValue() + 10)/10)*10);
             }, this));
 
             this.spnPerspective = new Common.UI.MetricSpinner({
@@ -450,7 +449,7 @@ define([
             });
             this.lockedControls.push(this.btnNarrow);
             this.btnNarrow.on('click', _.bind(function() {
-                this.spnPerspective.setValue(this.spnPerspective.getNumberValue() - 5);
+                this.spnPerspective.setValue(Math.ceil((this.spnPerspective.getNumberValue() - 5)/5)*5);
             }, this));
 
             this.btnWiden= new Common.UI.Button({
@@ -463,7 +462,7 @@ define([
             });
             this.lockedControls.push(this.btnWiden);
             this.btnWiden.on('click', _.bind(function() {
-                this.spnPerspective.setValue(this.spnPerspective.getNumberValue() + 5);
+                this.spnPerspective.setValue(Math.floor((this.spnPerspective.getNumberValue() + 5)/5)*5);
             }, this));
 
             this.chRightAngle = new Common.UI.CheckBox({

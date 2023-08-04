@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2019
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -29,7 +28,7 @@
  * Creative Commons Attribution-ShareAlike 4.0 International. See the License
  * terms at http://creativecommons.org/licenses/by-sa/4.0/legalcode
  *
-*/
+ */
 DE.ApplicationController = new(function(){
     var me,
         api,
@@ -424,6 +423,9 @@ DE.ApplicationController = new(function(){
         if (!config.canBackToFolder) {
             $('#idt-close').hide();
             itemsCount--;
+        } else {
+            var text = config.customization.goback.text;
+            text && (typeof text == 'string') && $('#idt-close .caption').text(text);
         }
 
         if (itemsCount < 7) {
@@ -672,6 +674,28 @@ DE.ApplicationController = new(function(){
         me.loadMask && me.loadMask.setTitle(me.textLoadingDocument + ': ' + common.utils.fixedDigits(Math.min(Math.round(proc*100), 100), 3, "  ") + '%');
     }
 
+    function onAdvancedOptions(type, advOptions, mode, formatOptions) {
+        if (type == Asc.c_oAscAdvancedOptionsID.DRM) {
+            var isCustomLoader = !!config.customization.loaderName || !!config.customization.loaderLogo;
+            var submitPassword = function(val) {
+                api && api.asc_setAdvancedOptions(Asc.c_oAscAdvancedOptionsID.DRM, new Asc.asc_CDRMAdvancedOptions(val)); 
+                me.loadMask && me.loadMask.show();
+                if(!isCustomLoader) {
+                    $('#loading-mask').addClass("end-animation");
+                    $('#loading-mask').removeClass("none-animation");
+                }
+            };
+            common.controller.modals.createDlgPassword(submitPassword);
+            if(isCustomLoader) {
+                hidePreloader();
+            } else {
+                $('#loading-mask').removeClass("end-animation");
+                $('#loading-mask').addClass("none-animation");
+            }
+            onLongActionEnd(Asc.c_oAscAsyncActionType['BlockInteraction'], LoadingDocument);
+        }
+    }
+
     function onError(id, level, errData) {
         if (id == Asc.c_oAscError.ID.LoadingScriptError) {
             $('#id-critical-error-title').text(me.criticalErrorTitle);
@@ -765,6 +789,9 @@ DE.ApplicationController = new(function(){
                 else
                     message = me.errorInconsistentExt;
                 break;
+
+            case Asc.c_oAscError.ID.SessionToken: // don't show error message
+                return;
 
             default:
                 message = me.errorDefaultMessage.replace('%1', id);
@@ -921,6 +948,7 @@ DE.ApplicationController = new(function(){
             api.asc_registerCallback('asc_onError',                 onError);
             api.asc_registerCallback('asc_onDocumentContentReady',  onDocumentContentReady);
             api.asc_registerCallback('asc_onOpenDocumentProgress',  onOpenDocument);
+            api.asc_registerCallback('asc_onAdvancedOptions',       onAdvancedOptions);
 
             api.asc_registerCallback('asc_onCountPages',            onCountPages);
 //            api.asc_registerCallback('OnCurrentVisiblePage',    onCurrentPage);

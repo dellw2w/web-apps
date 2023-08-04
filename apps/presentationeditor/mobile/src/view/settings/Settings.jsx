@@ -13,6 +13,7 @@ import { PresentationColorSchemes } from "./PresentationSettings";
 // import PresentationAboutController from '../../controller/settings/PresentationAbout';
 import About from '../../../../../common/mobile/lib/view/About';
 import SharingSettings from "../../../../../common/mobile/lib/view/SharingSettings";
+import VersionHistoryController from '../../../../../common/mobile/lib/controller/VersionHistory';
 
 const routes = [
     {
@@ -47,13 +48,16 @@ const routes = [
         path: '/about/',
         component: About
     },
-
-    // Sharing Settings
-
+    // Version History 
     {
-        path: '/sharing-settings/',
-        component: SharingSettings
-    }
+        path: '/version-history',
+        component: VersionHistoryController,
+        options: {
+            props: {
+                isNavigate: true
+            }
+        }
+    },
     /*{
         path: '/presentation-settings/',
         component: PresentationSettingsController,
@@ -65,11 +69,13 @@ const routes = [
 ];
 
 
-const SettingsList = inject("storeAppOptions", "storeToolbarSettings")(observer(props => {
+const SettingsList = inject("storeAppOptions", "storeToolbarSettings", "storeVersionHistory")(observer(props => {
     const { t } = useTranslation();
     const _t = t('View.Settings', {returnObjects: true});
     const storeToolbarSettings = props.storeToolbarSettings;
     const disabledPreview = storeToolbarSettings.countPages <= 0;
+    const storeVersionHistory = props.storeVersionHistory;
+    const isVersionHistoryMode = storeVersionHistory.isVersionHistoryMode;
 
     const navbar = <Navbar title={_t.textSettings}>
         {!props.inPopover  && <NavRight><Link popupClose=".settings-popup">{_t.textDone}</Link></NavRight>}
@@ -88,9 +94,9 @@ const SettingsList = inject("storeAppOptions", "storeToolbarSettings")(observer(
         }
     };
 
-    const onOpenCollaboration = async () => {
-        await closeModal();
-        await props.openOptions('coauth');
+    const onOpenOptions = keyword => {
+        closeModal();
+        props.openOptions(keyword);
     }
 
     const onPrint = () => {
@@ -137,7 +143,8 @@ const SettingsList = inject("storeAppOptions", "storeToolbarSettings")(observer(
         _canDownloadOrigin = false,
         _canAbout = true,
         _canHelp = true,
-        _canPrint = false;
+        _canPrint = false,
+        _canFeedback = true;
 
     if (appOptions.isDisconnected) {
         _isEdit = false;
@@ -148,11 +155,14 @@ const SettingsList = inject("storeAppOptions", "storeToolbarSettings")(observer(
         _canDownload = appOptions.canDownload;
         _canDownloadOrigin = appOptions.canDownloadOrigin;
         _canPrint = appOptions.canPrint;
+
         if (appOptions.customization && appOptions.canBrandingExt) {
-            _canAbout = (appOptions.customization.about!==false);
+            _canAbout = appOptions.customization.about !== false;
         }
+
         if (appOptions.customization) {
-            _canHelp = (appOptions.customization.help!==false);
+            _canHelp = appOptions.customization.help !== false;
+            _canFeedback = appOptions.customization.feedback !== false;
         }
     }
 
@@ -169,25 +179,33 @@ const SettingsList = inject("storeAppOptions", "storeToolbarSettings")(observer(
                 {navbar}
                 <List>
                     {!props.inPopover &&
-                        <ListItem disabled={appOptions.readerMode || disabledPreview ? true : false} title={!_isEdit ? _t.textFind : _t.textFindAndReplace} link="#" searchbarEnable='.searchbar' onClick={closeModal} className='no-indicator'>
+                        <ListItem disabled={appOptions.readerMode || disabledPreview ? true : false} title={!_isEdit || isVersionHistoryMode ? _t.textFind : _t.textFindAndReplace} link="#" searchbarEnable='.searchbar' onClick={closeModal} className='no-indicator'>
                             <Icon slot="media" icon="icon-search"></Icon>
                         </ListItem>
                     }
-                    {window.matchMedia("(max-width: 374px)").matches ?
-                        <ListItem title={_t.textCollaboration} link="#" onClick={onOpenCollaboration} className='no-indicator'>
+                    {window.matchMedia("(max-width: 374px)").matches && !isVersionHistoryMode ?
+                        <ListItem title={_t.textCollaboration} link="#" onClick={() => onOpenOptions('coauth')} className='no-indicator'>
                             <Icon slot="media" icon="icon-collaboration"></Icon>
                         </ListItem> 
                     : null}
                     {_isEdit && 
+                        <ListItem title={t('View.Settings.textVersionHistory')} link="#" onClick={() => {
+                            if(Device.phone) {
+                                onOpenOptions('history');
+                            } else {
+                                onoptionclick.bind(this, "/version-history")();
+                            }
+                        }}>
+                            <Icon slot="media" icon="icon-version-history"></Icon>
+                        </ListItem>
+                    }
+                    {(_isEdit && !isVersionHistoryMode) &&
                         <ListItem link="#" title={_t.textPresentationSettings} onClick={onoptionclick.bind(this, '/presentation-settings/')}>
                             <Icon slot="media" icon="icon-setup"></Icon>
                         </ListItem>
                     }
                     <ListItem title={_t.textApplicationSettings} link="#" onClick={onoptionclick.bind(this, '/application-settings/')}>
                         <Icon slot="media" icon="icon-app-settings"></Icon>
-                    </ListItem>
-                    <ListItem title={t('Common.Collaboration.textSharingSettings')} link="#" onClick={onoptionclick.bind(this, "/sharing-settings/")}>
-                        <Icon slot="media" icon="icon-sharing-settings"></Icon>
                     </ListItem>
                     {_canDownload &&
                         <ListItem title={_t.textDownload} link="#" onClick={onoptionclick.bind(this, '/download/')}>
@@ -207,15 +225,21 @@ const SettingsList = inject("storeAppOptions", "storeToolbarSettings")(observer(
                     <ListItem title={_t.textPresentationInfo} link="#" onClick={onoptionclick.bind(this, "/presentation-info/")}>
                         <Icon slot="media" icon="icon-info"></Icon>
                     </ListItem>
-                    <ListItem title={_t.textHelp} link="#" className='no-indicator' onClick={showHelp}>
-                        <Icon slot="media" icon="icon-help"></Icon>
-                    </ListItem>
-                    <ListItem title={_t.textAbout} link="#" onClick={onoptionclick.bind(this, "/about/")}>
-                        <Icon slot="media" icon="icon-about"></Icon>
-                    </ListItem>
-                    <ListItem title={t('View.Settings.textFeedback')} link="#" className='no-indicator' onClick={showFeedback}>
-                            <Icon slot="media" icon="icon-feedback"></Icon>
-                    </ListItem>
+                    {_canHelp &&
+                        <ListItem title={_t.textHelp} link="#" className='no-indicator' onClick={showHelp}>
+                            <Icon slot="media" icon="icon-help"></Icon>
+                        </ListItem>
+                    }
+                    {_canAbout &&
+                        <ListItem title={_t.textAbout} link="#" onClick={onoptionclick.bind(this, "/about/")}>
+                            <Icon slot="media" icon="icon-about"></Icon>
+                        </ListItem>
+                    }
+                    {_canFeedback &&
+                        <ListItem title={t('View.Settings.textFeedback')} link="#" className='no-indicator' onClick={showFeedback}>
+                                <Icon slot="media" icon="icon-feedback"></Icon>
+                        </ListItem>
+                    }
                 </List>
             </Page>
         </View>

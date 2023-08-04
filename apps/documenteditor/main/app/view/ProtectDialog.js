@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2022
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -73,8 +72,8 @@ define([
                         '<label>' + t.txtRepeat + '</label>',
                     '</div>',
                     '<div id="id-protect-repeat-txt" class="input-row" style="margin-bottom: 10px;"></div>',
-                    '<div class="input-row" style="margin-bottom: 5px;">',
-                        '<label style="font-weight: bold;letter-spacing: 0.01em;margin-bottom: 5px;">' + t.txtAllow + '</label>',
+                    '<div class="" style="margin-bottom: 5px;">',
+                        '<label class="font-weight-bold" style="margin-bottom: 5px;">' + t.txtAllow + '</label>',
                     '</div>',
                     '<div id="id-protect-radio-view" style="margin-bottom: 8px;"></div>',
                     '<div id="id-protect-radio-forms" style="margin-bottom: 8px;"></div>',
@@ -114,7 +113,10 @@ define([
                 maxLength: 15,
                 validateOnBlur: false,
                 repeatInput: this.repeatPwd,
-                showPwdOnClick: true
+                showPwdOnClick: true,
+                validation  : function(value) {
+                    return (value.length>15) ? me.txtLimit : true;
+                }
             });
 
             this.rbView = new Common.UI.RadioBox({
@@ -146,6 +148,10 @@ define([
                 value: Asc.c_oAscEDocProtect.Comments
             });
 
+            this.btnOk = new Common.UI.Button({
+                el: this.$window.find('.primary')
+            });
+
             this.afterRender();
         },
 
@@ -171,8 +177,11 @@ define([
         },
 
         _handleInput: function(state) {
+            if (state === 'ok' && this.btnOk.isDisabled())
+                return;
+
             if (this.handler) {
-                if (state == 'ok') {
+                if (state === 'ok') {
                     if (this.inputPwd.checkValidate() !== true)  {
                         this.inputPwd.focus();
                         return;
@@ -191,9 +200,6 @@ define([
 
         _setDefaults: function (props) {
             if (props) {
-                this.rbReview.setDisabled(!props.canReview);
-                this.rbForms.setDisabled(!props.canFillForms);
-                this.rbComments.setDisabled(!props.canComments);
             }
         },
 
@@ -208,6 +214,10 @@ define([
                 return Asc.c_oAscEDocProtect.Comments;
         },
 
+        SetDisabled: function(disabled) {
+            this.btnOk.setDisabled(disabled);
+        },
+
         txtPassword : "Password",
         txtRepeat: 'Repeat password',
         txtOptional: 'optional',
@@ -219,7 +229,8 @@ define([
         textView: 'No changes (Read only)',
         textForms: 'Filling forms',
         textReview: 'Tracked changes',
-        textComments: 'Comments'
+        textComments: 'Comments',
+        txtLimit: 'Password is limited to 15 characters'
 
     }, DE.Views.ProtectDialog || {}));
 });

@@ -11,7 +11,9 @@ export class storeAppOptions {
 
             lostEditingRights: observable,
             changeEditingRights: action,
+            
             canBranding: observable,
+            canBrandingExt: observable,
 
             isDocReady: observable,
             changeDocReady: action
@@ -26,7 +28,9 @@ export class storeAppOptions {
         this.canViewComments = value;
     }
 
-    canBranding = undefined;
+    canBranding = true;
+    canBrandingExt = true;
+
     lostEditingRights = false;
     changeEditingRights (value) {
         this.lostEditingRights = value;
@@ -80,6 +84,7 @@ export class storeAppOptions {
             permissions.edit = false;
         this.canBranding = params.asc_getCustomization();
         this.canBrandingExt = params.asc_getCanBranding() && (typeof this.customization == 'object');
+        this.canModifyFilter = permissions.modifyFilter !== false;
         this.canAutosave = true;
         this.canAnalytics = params.asc_getIsAnalyticsEnable();
         this.canLicense = (licType === Asc.c_oLicenseResult.Success || licType === Asc.c_oLicenseResult.SuccessLimit);
@@ -117,6 +122,11 @@ export class storeAppOptions {
         this.canUseCommentPermissions && AscCommon.UserInfoParser.setCommentPermissions(permissions.commentGroups);  
         this.canUseUserInfoPermissions && AscCommon.UserInfoParser.setUserInfoPermissions(permissions.userInfoGroups);
 
+        this.canUseHistory = this.canLicense && !this.isLightVersion && this.config.canUseHistory && this.canCoAuthoring && !this.isDesktopApp;
+        this.canHistoryClose = this.config.canHistoryClose;
+        this.canHistoryRestore= this.config.canHistoryRestore;
+
         this.canLiveView = !!params.asc_getLiveViewerSupport() && (this.config.mode === 'view') && isSupportEditFeature;
+        this.isAnonymousSupport = !!Common.EditorApi.get().asc_isAnonymousSupport();
     }
 }

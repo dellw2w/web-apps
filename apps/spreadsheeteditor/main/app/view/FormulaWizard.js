@@ -1,6 +1,5 @@
 /*
- *
- * (c) Copyright Ascensio System SIA 2010-2020
+ * (c) Copyright Ascensio System SIA 2010-2023
  *
  * This program is a free software product. You can redistribute it and/or
  * modify it under the terms of the GNU Affero General Public License (AGPL)
@@ -13,7 +12,7 @@
  * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR  PURPOSE. For
  * details, see the GNU AGPL at: http://www.gnu.org/licenses/agpl-3.0.html
  *
- * You can contact Ascensio System SIA at 20A-12 Ernesta Birznieka-Upisha
+ * You can contact Ascensio System SIA at 20A-6 Ernesta Birznieka-Upish
  * street, Riga, Latvia, EU, LV-1050.
  *
  * The  interactive user interfaces in modified source and object code versions
@@ -67,7 +66,7 @@ define([
                                     '</div>',
                                     '<div style="margin-top: 4px;">',
                                         '<label id="formula-wizard-lbl-func-res">' + this.textFunctionRes + '</label>',
-                                        '<div id="formula-wizard-lbl-val-func" class="input-label" style="float: right; width: 200px;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"></div>',
+                                        '<div id="formula-wizard-lbl-val-func" class="input-label float-right" style="width: 200px;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"></div>',
                                     '</div>',
                                 '</div>',
                                 '</td></tr>',
@@ -307,8 +306,8 @@ define([
 
         setControls: function(argcount, argtype, argval, argres) {
             var me = this,
-                argtpl = '<tr><td style="padding-right: 10px;padding-bottom: 8px;vertical-align: middle;"><div id="formula-wizard-lbl-name-arg{0}" style="min-width:' + this.minArgWidth + 'px;white-space: nowrap;margin-top: 1px;"></div></td>' +
-                        '<td style="padding-right: 5px;padding-bottom: 8px;width: 100%;vertical-align: middle;"><div id="formula-wizard-txt-arg{0}"></div></td>' +
+                argtpl = '<tr><td class="padding-right-10" style="padding-bottom: 8px;vertical-align: middle;"><div id="formula-wizard-lbl-name-arg{0}" style="min-width:' + this.minArgWidth + 'px;white-space: nowrap;margin-top: 1px;"></div></td>' +
+                        '<td class="padding-right-5" style="padding-bottom: 8px;width: 100%;vertical-align: middle;"><div id="formula-wizard-txt-arg{0}"></div></td>' +
                         '<td style="padding-bottom: 8px;vertical-align: middle;"><div id="formula-wizard-lbl-val-arg{0}" class="input-label" style="margin-top: 1px;width: 200px;overflow: hidden;text-overflow: ellipsis;white-space: nowrap;"></div></td></tr>',
                 div = $(Common.Utils.String.format(argtpl, argcount));
             this.tableArgs.append(div);
@@ -456,8 +455,27 @@ define([
                     lang = (this.lang) ? this.lang.split(/[\-\_]/)[0] : 'en';
 
                 var me = this,
-                    name = '/Functions/' + this.funcprops.origin.toLocaleLowerCase().replace(/\./g, '-') + '.htm',
+                    func = this.funcprops.origin.toLocaleLowerCase().replace(/\./g, '-'),
+                    name = '/Functions/' + func + '.htm',
                     url = 'resources/help/' + lang + name;
+
+                if ( Common.Controllers.Desktop.isActive() ) {
+                    if ( Common.Controllers.Desktop.isHelpAvailable() )
+                        url = Common.Controllers.Desktop.helpUrl() + name;
+                    else {
+                        const helpCenter = Common.Utils.InternalSettings.get('url-help-center');
+                        if ( helpCenter ) {
+                            const _url_obj = new URL(helpCenter);
+                            if ( !!_url_obj.searchParams )
+                                _url_obj.searchParams.set('function', func);
+
+                            window.open(_url_obj.toString(), '_blank');
+                        }
+
+                        me.helpUrl = null;
+                        return;
+                    }
+                }
 
                 fetch(url).then(function(response){
                     if ( response.ok ) {
@@ -465,11 +483,10 @@ define([
                         me.helpUrl = url;
                         me.showHelp();
                     } else {
-                        lang = '{{DEFAULT_LANG}}';
-                        url = 'resources/help/' + lang + name;
+                        url = 'resources/help/' + '{{DEFAULT_LANG}}' + name;
                         fetch(url).then(function(response){
                             if ( response.ok ) {
-                                Common.Utils.InternalSettings.set("sse-settings-func-help", lang);
+                                Common.Utils.InternalSettings.set("sse-settings-func-help", '{{DEFAULT_LANG}}');
                                 me.helpUrl = url;
                                 me.showHelp();
                             } else {

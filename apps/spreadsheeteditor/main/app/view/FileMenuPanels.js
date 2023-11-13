@@ -1029,8 +1029,19 @@ define([
             Common.UI.Themes.setTheme(this.cmbTheme.getValue());
             Common.localStorage.setItem("sse-settings-show-alt-hints", this.chUseAltKey.isChecked() ? 1 : 0);
             Common.Utils.InternalSettings.set("sse-settings-show-alt-hints", Common.localStorage.getBool("sse-settings-show-alt-hints"));
+            
+            var value = Common.localStorage.getItem("sse-settings-zoom");
+            var settingsZoom = (value!==null) ? parseInt(value):0;
             Common.localStorage.setItem("sse-settings-zoom", this.cmbZoom.getValue());
             Common.Utils.InternalSettings.set("sse-settings-zoom", Common.localStorage.getItem("sse-settings-zoom"));
+            // apply zoom to page
+            value = Common.localStorage.getItem("sse-last-zoom");
+            var currentZoom = (value!==null) ? parseInt(value):0;
+            if(settingsZoom == currentZoom || settingsZoom == -3) {
+                value = this.cmbZoom.getValue();
+                this.api.asc_setZoom(value>0 ? value/100 : (value < 0 && currentZoom > 0) ? currentZoom/100 : 1);
+            }
+
             /** coauthoring begin **/
             Common.localStorage.setItem("sse-settings-livecomment", this.chLiveComment.isChecked() ? 1 : 0);
             Common.localStorage.setItem("sse-settings-resolvedcomment", this.chResolvedComment.isChecked() ? 1 : 0);

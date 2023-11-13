@@ -772,8 +772,19 @@ define([
             }
             Common.localStorage.setItem("pe-settings-show-alt-hints", this.chUseAltKey.isChecked() ? 1 : 0);
             Common.Utils.InternalSettings.set("pe-settings-show-alt-hints", Common.localStorage.getBool("pe-settings-show-alt-hints"));
+
+            var value = Common.localStorage.getItem("pe-settings-zoom");
+            var settingsZoom = (value!==null) ? parseInt(value):0;
             Common.localStorage.setItem("pe-settings-zoom", this.cmbZoom.getValue());
             Common.Utils.InternalSettings.set("pe-settings-zoom", Common.localStorage.getItem("pe-settings-zoom"));
+            // apply zoom to page
+            value = Common.localStorage.getItem("pe-last-zoom");
+            var lastZoom = (value!==null) ? parseInt(value):0;
+            var currentZoom = $('#btn-zoom-topage').hasClass('active') ? -1 : ($('#btn-zoom-towidth').hasClass('active') ? -2 : lastZoom);
+            if(settingsZoom == currentZoom || settingsZoom == -3) {
+                value = this.cmbZoom.getValue();
+                (value == -1) ? this.api.zoomFitToPage() : ((value == -2) ? this.api.zoomFitToWidth() : this.api.zoom(value > 0 ? value : (value == -3 && lastZoom > 0) ? lastZoom : 100));
+            }
             /** coauthoring begin **/
             if (this.mode.isEdit && !this.mode.isOffline && this.mode.canCoAuthoring && this.mode.canChangeCoAuthoring) {
                 Common.localStorage.setItem("pe-settings-coauthmode", this.rbCoAuthModeFast.getValue() ? 1 : 0);

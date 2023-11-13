@@ -944,8 +944,9 @@ define([
                 var zf = (value!==null) ? parseInt(value)/100 : (this.appOptions.customization && this.appOptions.customization.zoom ? parseInt(this.appOptions.customization.zoom)/100 : 1);
                 value = Common.localStorage.getItem("sse-last-zoom");
                 var lastZoom = (value!==null) ? parseInt(value)/100 : 1;
-                this.api.asc_setZoom(zf>0 ? zf : (zf < 0 && lastZoom > 0) ? lastZoom : 1);
-
+                lastZoom = zf>0 ? zf : ((zf < 0 && lastZoom > 0) ? lastZoom : 1);
+                this.api.asc_setZoom(lastZoom);
+                Common.localStorage.setItem("sse-last-zoom", lastZoom*100);
                 /** coauthoring begin **/
                 this.isLiveCommenting = Common.localStorage.getBool("sse-settings-livecomment", true);
                 Common.Utils.InternalSettings.set("sse-settings-livecomment", this.isLiveCommenting);

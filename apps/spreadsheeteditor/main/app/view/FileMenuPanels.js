@@ -794,7 +794,8 @@ define([
             $markup.find('.btn.primary').each(function(index, el){
                 (new Common.UI.Button({
                     el: $(el)
-                })).on('click', _.bind(me.applySettings, me));
+                })).on('click', _.bind(me.applySettings, me))
+                   .on('click', _.bind(me.updateZoom, me));
             });
 
             this.chQuickPrint = new Common.UI.CheckBox({
@@ -888,6 +889,7 @@ define([
         updateSettings: function() {
             var value = Common.Utils.InternalSettings.get("sse-settings-zoom");
             value = (value!==null) ? parseInt(value) : (this.mode.customization && this.mode.customization.zoom ? parseInt(this.mode.customization.zoom) : 100);
+            this.currentZoomSetting = value;
             var item = this.cmbZoom.store.findWhere({value: value});
             this.cmbZoom.setValue(item ? parseInt(item.get('value')) : (value>0 ? value+'%' : 100));
             this.chUseAltKey.setValue(Common.Utils.InternalSettings.get("sse-settings-show-alt-hints"));
@@ -1029,18 +1031,8 @@ define([
             Common.UI.Themes.setTheme(this.cmbTheme.getValue());
             Common.localStorage.setItem("sse-settings-show-alt-hints", this.chUseAltKey.isChecked() ? 1 : 0);
             Common.Utils.InternalSettings.set("sse-settings-show-alt-hints", Common.localStorage.getBool("sse-settings-show-alt-hints"));
-            
-            var value = Common.localStorage.getItem("sse-settings-zoom");
-            var settingsZoom = (value!==null) ? parseInt(value):0;
             Common.localStorage.setItem("sse-settings-zoom", this.cmbZoom.getValue());
             Common.Utils.InternalSettings.set("sse-settings-zoom", Common.localStorage.getItem("sse-settings-zoom"));
-            // apply zoom to page
-            value = Common.localStorage.getItem("sse-last-zoom");
-            var currentZoom = (value!==null) ? parseInt(value):0;
-            if(settingsZoom == currentZoom || settingsZoom == -3) {
-                value = this.cmbZoom.getValue();
-                this.api.asc_setZoom(value>0 ? value/100 : (value < 0 && currentZoom > 0) ? currentZoom/100 : 1);
-            }
 
             /** coauthoring begin **/
             Common.localStorage.setItem("sse-settings-livecomment", this.chLiveComment.isChecked() ? 1 : 0);
@@ -1182,6 +1174,16 @@ define([
                 if ( this.mode.isEdit ) {
                     this.$el.show();
                 }
+            }
+        },
+
+        updateZoom: function (){
+            var value = this.cmbZoom.getValue();
+            if(value == this.currentZoomSetting) return;
+            var lastZoom = Common.Utils.InternalSettings.get("sse-last-zoom");
+            lastZoom = (lastZoom!==null) ? parseInt(lastZoom):0;
+            if(this.currentZoomSetting == -3 || this.currentZoomSetting == lastZoom ) {
+                this.api.asc_setZoom(value>0 ? value/100 : (value < 0 && lastZoom > 0) ? lastZoom/100 : 1);
             }
         },
 

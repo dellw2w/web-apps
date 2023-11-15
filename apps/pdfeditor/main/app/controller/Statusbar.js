@@ -172,6 +172,8 @@ define([
             $('.statusbar #label-zoom').text(Common.Utils.String.format(this.zoomText, percent));
             if(!this._isDocReady) return;
             Common.localStorage.setItem('pdfe-last-zoom', percent);
+            Common.Utils.InternalSettings.set('pdfe-current-type-zoom', type ? type-3 : 0);
+            Common.Utils.InternalSettings.set('pdfe-last-zoom', percent);
         },
 
         setStatusCaption: function(text, force, delay, callback) {

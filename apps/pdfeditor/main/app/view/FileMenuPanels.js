@@ -578,7 +578,8 @@ define([
             $markup.find('.btn.primary').each(function(index, el){
                 (new Common.UI.Button({
                     el: $(el)
-                })).on('click', _.bind(me.applySettings, me));
+                })).on('click', _.bind(me.applySettings, me))
+                    .on('click', _.bind(me.updateZoom, me));
             });
 
             this.chRTL = new Common.UI.CheckBox({
@@ -681,6 +682,7 @@ define([
 
             var value = Common.Utils.InternalSettings.get("pdfe-settings-zoom");
             value = (value!==null) ? parseInt(value) : (this.mode.customization && this.mode.customization.zoom ? parseInt(this.mode.customization.zoom) : 100);
+            this.currentZoomSetting = value;
             var item = this.cmbZoom.store.findWhere({value: value});
             this.cmbZoom.setValue(item ? parseInt(item.get('value')) : (value>0 ? value+'%' : 100));
 
@@ -739,19 +741,8 @@ define([
                 Common.UI.Themes.toggleContentTheme();
             Common.localStorage.setItem("pdfe-settings-show-alt-hints", this.chUseAltKey.isChecked() ? 1 : 0);
             Common.Utils.InternalSettings.set("pdfe-settings-show-alt-hints", Common.localStorage.getBool("pdfe-settings-show-alt-hints"));
-
-            var value = Common.localStorage.getItem("pdfe-settings-zoom");
-            var settingsZoom = (value!==null) ? parseInt(value):0;
             Common.localStorage.setItem("pdfe-settings-zoom", this.cmbZoom.getValue());
             Common.Utils.InternalSettings.set("pdfe-settings-zoom", Common.localStorage.getItem("pdfe-settings-zoom"));
-            // apply zoom to page
-            value = Common.localStorage.getItem("pdfe-last-zoom");
-            var lastZoom = (value!==null) ? parseInt(value):0;
-            var currentZoom = $('#btn-zoom-topage').hasClass('active') ? -1 : ($('#btn-zoom-towidth').hasClass('active')?-2 : lastZoom);
-            if(settingsZoom == currentZoom || settingsZoom == -3) {
-                value = this.cmbZoom.getValue();
-                (value == -1) ? this.api.zoomFitToPage() : ((value == -2) ? this.api.zoomFitToWidth() : this.api.zoom(value > 0 ? value : (value == -3 && lastZoom > 0) ? lastZoom : 100));
-            }
 
             /** coauthoring begin **/
             Common.localStorage.setItem("pdfe-settings-livecomment", this.chLiveComment.isChecked() ? 1 : 0);
@@ -812,6 +803,18 @@ define([
                 combo.setValue(this._fontRender);
             }
             this._fontRender = combo.getValue();
+        },
+
+        updateZoom: function (){
+            var value = this.cmbZoom.getValue();
+            if(value == this.currentZoomSetting) return;
+            var lastZoom = Common.Utils.InternalSettings.get("pdfe-last-zoom");
+            lastZoom = (lastZoom!==null) ? parseInt(lastZoom):0;
+            var type = Common.Utils.InternalSettings.get("pdfe-current-type-zoom");
+            type = (type!==null) ? parseInt(type) : 0;
+            if(this.currentZoomSetting == type || this.currentZoomSetting == -3 || this.currentZoomSetting == lastZoom ) {
+                (value == -1) ? this.api.zoomFitToPage() : ((value == -2) ? this.api.zoomFitToWidth() : this.api.zoom(value>0 ? value : (value == -3 && lastZoom > 0) ? lastZoom : 100));
+            }
         },
 
         strZoom: 'Default Zoom Value',

@@ -942,7 +942,8 @@ define([
                 value = (this.appOptions.isEditMailMerge || this.appOptions.isEditDiagram || this.appOptions.isEditOle) ? 100 : Common.localStorage.getItem("sse-settings-zoom");
                 Common.Utils.InternalSettings.set("sse-settings-zoom", value);
                 var zf = (value!==null) ? parseInt(value)/100 : (this.appOptions.customization && this.appOptions.customization.zoom ? parseInt(this.appOptions.customization.zoom)/100 : 1);
-                value = Common.localStorage.getItem("sse-last-zoom");
+                value = Common.localStorage.getItem("sse-last-zoom")
+                Common.Utils.InternalSettings.set("sse-last-zoom", value);
                 var lastZoom = (value!==null) ? parseInt(value)/100 : 1;
                 lastZoom = zf>0 ? zf : ((zf < 0 && lastZoom > 0) ? lastZoom : 1);
                 this.api.asc_setZoom(lastZoom);

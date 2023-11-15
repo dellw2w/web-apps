@@ -145,6 +145,7 @@ define([
             var pr = Math.floor((percent +.005)*100);
             this.statusbar.labelZoom.text(Common.Utils.String.format(this.zoomText, pr));
             Common.localStorage.setItem('sse-last-zoom', pr);
+            Common.Utils.InternalSettings.set('sse-last-zoom', pr);
         },
 
         onApiDisconnect: function() {

@@ -180,12 +180,14 @@ define([
                  this.statusbar.btnZoomToPage.toggle(type == 2, true);
                  this.statusbar.btnZoomToWidth.toggle(type == 1, true);
                  this._state.zoom_type = type;
+                 Common.Utils.InternalSettings.set('pe-current-type-zoom', type ? type-3 : 0);
              }
              if (this._state.zoom_percent !== percent) {
                  $('#status-label-zoom').text(Common.Utils.String.format(this.zoomText, percent));
                  this._state.zoom_percent = percent;
                  if(!this._isZoomRecord ) return;
                  Common.localStorage.setItem('pe-last-zoom', percent);
+                 Common.Utils.InternalSettings.set('pe-last-zoom', percent);
              }
         },
 
